@@ -34,25 +34,39 @@ export const DEFAULT_MAPPINGS: Record<string, Record<string, string>> = {
   // Commandes - Entête
   commandes_entete: {
     numCommande: 'Num_Cmd',
-    dateCommande: 'Date_Cmd',
+    dateCommande: 'Date',
     codeClient: 'Code_Client',
-    status: 'Etat',
+    devise: 'Devise',
+    modeReg: 'Mode_Reg',
+    dateLiv: 'Date_Liv',
     totalHT: 'Total_HT',
+    totalTVA: 'Total_Tva',
     totalTTC: 'Total_TTC',
-    observation: 'Observation',
+    status: 'Etat',
+    orderType: 'Type',
+    totalRemise: 'Total_Remise',
+    totalDC: 'Total_DC',
+    designation: 'Designation',
+    adresseLivraison: 'AdresseLivraisonUtilisee',
   },
   // Commandes - Détail (lignes)
   commandes_detail: {
     numCommande: 'Num_Cmd',
-    numLigne: 'Num_Ligne',
     codeArticle: 'Code_Article',
+    codeClient: 'Code_Client',
+    dateCommande: 'Date',
+    devise: 'Devise',
+    modeReg: 'Mode_Reg',
+    dateLiv: 'Date_Liv',
+    quantite: 'Qte',
+    quantiteRecue: 'Qte_Recue',
+    tauxTVA: 'Tva',
+    prixUnitaire: 'Prix_Unit',
     designation: 'Designation',
-    quantite: 'Quantite',
-    prixUnitaire: 'Prix_Unitaire',
     remise: 'Remise',
-    tauxTVA: 'Taux_TVA',
-    montantHT: 'Montant_HT',
-    montantTTC: 'Montant_TTC',
+    numDevis: 'Num_Devis',
+    dc: 'DC',
+    typeDC: 'Type_DC',
   },
   // Factures - Entête
   factures_entete: {
@@ -143,7 +157,7 @@ export class DmsMappingService {
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
     private appConfigService: AppConfigService,
-  ) {}
+  ) { }
 
   // Get all mappings
   async findAll(): Promise<DmsMapping[]> {

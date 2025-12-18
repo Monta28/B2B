@@ -588,8 +588,18 @@ export const Orders = () => {
     mutationFn: ({ id, status }: { id: string, status: OrderStatus }) => api.updateOrderStatus(id, status),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      if (variables.status === OrderStatus.VALIDATED && printOnValidate) handlePrintPreparation(variables.id);
+      if (variables.status === OrderStatus.VALIDATED) {
+        toast.success("Commande validée et transférée au DMS avec succès !");
+        if (printOnValidate) handlePrintPreparation(variables.id);
+      } else if (variables.status === OrderStatus.CANCELLED) {
+        toast.success("Commande annulée.");
+      } else {
+        toast.success("Statut mis à jour.");
+      }
       setPrintOnValidate(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la mise à jour du statut");
     }
   });
 
@@ -1461,126 +1471,126 @@ export const Orders = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                 {/* Tableau des articles - Exactement comme QuickOrder */}
                 <div className="lg:col-span-2">
-                    <div className="card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-hidden min-h-[300px]">
-                      <table className="w-full text-left table-fixed">
-                        <thead className="bg-brand-900/50 border-b border-accent/10">
-                          <tr>
-                            <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase w-[32%]">Ref / Produit</th>
-                            <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[12%]">Dispo.</th>
-                            <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[8%]">Qté</th>
-                            <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">P.U. Net</th>
-                            <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">Total HT</th>
-                            <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[10%]">TVA</th>
-                            <th className="px-4 py-3 w-[10%]"></th>
+                  <div className="card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-hidden min-h-[300px]">
+                    <table className="w-full text-left table-fixed">
+                      <thead className="bg-brand-900/50 border-b border-accent/10">
+                        <tr>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase w-[32%]">Ref / Produit</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[12%]">Dispo.</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[8%]">Qté</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">P.U. Net</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">Total HT</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[10%]">TVA</th>
+                          <th className="px-4 py-3 w-[10%]"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-accent/10">
+                        {editLines.length === 0 ? (
+                          <tr><td colSpan={7} className="p-8 text-center text-slate-500">Aucune ligne saisie. Utilisez le formulaire ci-dessus.</td></tr>
+                        ) : editLines.map(line => (
+                          <tr key={line.id} className="hover:bg-brand-800/40">
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-white text-sm truncate">{line.product.reference}</div>
+                              <div className="text-xs text-slate-500 truncate" title={line.product.designation}>{line.product.designation}</div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {line.availability === 'DISPONIBLE' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-neon-green/20 text-neon-green border border-neon-green/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-neon-green mr-1"></span>
+                                  Dispo
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink border border-neon-pink/30">
+                                  Rupture
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm text-slate-300">{line.quantity}</td>
+                            <td className="px-4 py-3 text-right text-sm text-slate-300">{formatPrice(line.price.netPrice)}</td>
+                            <td className="px-4 py-3 text-right font-bold text-accent">{formatPrice(line.price.netPrice * line.quantity)}</td>
+                            <td className="px-4 py-3 text-center text-sm text-slate-300">
+                              {(() => {
+                                const rate = getEditTvaRatePercent(line);
+                                return rate !== null ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-neon-orange/10 text-neon-orange border border-neon-orange/30">{rate}%</span>
+                                ) : '-';
+                              })()}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button onClick={() => removeEditLine(line.id)} className="text-neon-pink/60 hover:text-neon-pink">✕</button>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-accent/10">
-                          {editLines.length === 0 ? (
-                            <tr><td colSpan={7} className="p-8 text-center text-slate-500">Aucune ligne saisie. Utilisez le formulaire ci-dessus.</td></tr>
-                          ) : editLines.map(line => (
-                            <tr key={line.id} className="hover:bg-brand-800/40">
-                              <td className="px-4 py-3">
-                                <div className="font-bold text-white text-sm truncate">{line.product.reference}</div>
-                                <div className="text-xs text-slate-500 truncate" title={line.product.designation}>{line.product.designation}</div>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                {line.availability === 'DISPONIBLE' ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-neon-green/20 text-neon-green border border-neon-green/30">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-neon-green mr-1"></span>
-                                    Dispo
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-neon-pink/20 text-neon-pink border border-neon-pink/30">
-                                    Rupture
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-slate-300">{line.quantity}</td>
-                              <td className="px-4 py-3 text-right text-sm text-slate-300">{formatPrice(line.price.netPrice)}</td>
-                              <td className="px-4 py-3 text-right font-bold text-accent">{formatPrice(line.price.netPrice * line.quantity)}</td>
-                              <td className="px-4 py-3 text-center text-sm text-slate-300">
-                                {(() => {
-                                  const rate = getEditTvaRatePercent(line);
-                                  return rate !== null ? (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-neon-orange/10 text-neon-orange border border-neon-orange/30">{rate}%</span>
-                                  ) : '-';
-                                })()}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <button onClick={() => removeEditLine(line.id)} className="text-neon-pink/60 hover:text-neon-pink">✕</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Récapitulatif - Exactement comme QuickOrder */}
-                  <div className="lg:col-span-1">
-                    <div className="card-futuristic rounded-2xl shadow-card border border-accent/10 p-6 sticky top-6">
-                      <h3 className="text-lg font-bold text-white mb-4">Récapitulatif</h3>
-
-                      <div className="space-y-3 text-sm border-b border-accent/10 pb-4 mb-4">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Lignes</span>
-                          <span className="font-medium text-slate-200">{editLines.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Total HT</span>
-                          <span className="font-medium text-slate-200">{formatPriceWithCurrency(editTotalHT)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Total TVA</span>
-                          <span className="font-medium text-slate-200">{editTotalTVA > 0 ? formatPriceWithCurrency(editTotalTVA) : '-'}</span>
-                        </div>
-                      </div>
-
-                      {/* TVA défalquée par taux */}
-                      {Object.keys(editTvaGroups).length > 0 && (
-                        <div className="space-y-2 text-xs border-b border-accent/10 pb-4 mb-4">
-                          <div className="text-slate-500 uppercase tracking-wider font-bold mb-2">Détail TVA</div>
-                          {Object.values(editTvaGroups)
-                            .sort((a, b) => a.rate - b.rate)
-                            .map(group => (
-                              <div className="flex justify-between" key={`tva-${group.rate}`}>
-                                <span className="text-slate-500">TVA {group.rate}%</span>
-                                <span className="font-medium text-slate-400">{formatPriceWithCurrency(group.vat)}</span>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-end mb-6">
-                        <span className="font-bold text-lg text-white">Total TTC</span>
-                        <span className="font-bold text-2xl text-accent">{formatPriceWithCurrency(editTotalTTC)}</span>
-                      </div>
-
-                      <button
-                        onClick={handleSaveEdit}
-                        disabled={editLines.length === 0 || updateOrderContentMutation.isPending}
-                        className="w-full py-3 bg-neon-green text-brand-950 rounded-lg font-bold hover:bg-neon-green/80 shadow-glow btn-glow disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
-                      >
-                        {updateOrderContentMutation.isPending ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-brand-950/30 border-t-brand-950 rounded-full animate-spin"></div>
-                            Enregistrement...
-                          </>
-                        ) : (
-                          'Valider la Commande'
-                        )}
-                      </button>
-
-                      <button
-                        onClick={closeEditModal}
-                        className="w-full py-2 mt-3 text-slate-500 text-sm hover:text-slate-300"
-                      >
-                        Annuler / Retour
-                      </button>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
+
+                {/* Récapitulatif - Exactement comme QuickOrder */}
+                <div className="lg:col-span-1">
+                  <div className="card-futuristic rounded-2xl shadow-card border border-accent/10 p-6 sticky top-6">
+                    <h3 className="text-lg font-bold text-white mb-4">Récapitulatif</h3>
+
+                    <div className="space-y-3 text-sm border-b border-accent/10 pb-4 mb-4">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Lignes</span>
+                        <span className="font-medium text-slate-200">{editLines.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Total HT</span>
+                        <span className="font-medium text-slate-200">{formatPriceWithCurrency(editTotalHT)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Total TVA</span>
+                        <span className="font-medium text-slate-200">{editTotalTVA > 0 ? formatPriceWithCurrency(editTotalTVA) : '-'}</span>
+                      </div>
+                    </div>
+
+                    {/* TVA défalquée par taux */}
+                    {Object.keys(editTvaGroups).length > 0 && (
+                      <div className="space-y-2 text-xs border-b border-accent/10 pb-4 mb-4">
+                        <div className="text-slate-500 uppercase tracking-wider font-bold mb-2">Détail TVA</div>
+                        {Object.values(editTvaGroups)
+                          .sort((a, b) => a.rate - b.rate)
+                          .map(group => (
+                            <div className="flex justify-between" key={`tva-${group.rate}`}>
+                              <span className="text-slate-500">TVA {group.rate}%</span>
+                              <span className="font-medium text-slate-400">{formatPriceWithCurrency(group.vat)}</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-end mb-6">
+                      <span className="font-bold text-lg text-white">Total TTC</span>
+                      <span className="font-bold text-2xl text-accent">{formatPriceWithCurrency(editTotalTTC)}</span>
+                    </div>
+
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={editLines.length === 0 || updateOrderContentMutation.isPending}
+                      className="w-full py-3 bg-neon-green text-brand-950 rounded-lg font-bold hover:bg-neon-green/80 shadow-glow btn-glow disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
+                    >
+                      {updateOrderContentMutation.isPending ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-brand-950/30 border-t-brand-950 rounded-full animate-spin"></div>
+                          Enregistrement...
+                        </>
+                      ) : (
+                        'Valider la Commande'
+                      )}
+                    </button>
+
+                    <button
+                      onClick={closeEditModal}
+                      className="w-full py-2 mt-3 text-slate-500 text-sm hover:text-slate-300"
+                    >
+                      Annuler / Retour
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

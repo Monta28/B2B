@@ -43,7 +43,7 @@ export class OrdersService {
     private notificationsGateway: NotificationsGateway,
     private dmsMappingService: DmsMappingService,
     private appConfigService: AppConfigService,
-  ) {}
+  ) { }
 
   async findAll(currentUser: any): Promise<Order[]> {
     const queryBuilder = this.orderRepository
@@ -307,25 +307,28 @@ export class OrdersService {
       throw new ForbiddenException('Commande en cours de modification par le client. Validation impossible pour le moment.');
     }
 
+    // Si le statut passe à VALIDATED, exporter vers le DMS AVANT de confirmer le changement de statut
     const oldStatus = order.status;
+    if (updateStatusDto.status === OrderStatus.VALIDATED && oldStatus !== OrderStatus.VALIDATED) {
+      console.log(`[OrdersService] Order ${order.orderNumber} being validated, exporting to DMS first...`);
+
+      const dmsResult = await this.exportOrderToDms(order.id);
+
+      if (!dmsResult.success) {
+        console.error(`[OrdersService] DMS export failed: ${dmsResult.error}`);
+        throw new BadRequestException(`Échec du transfert vers le DMS : ${dmsResult.error}. La commande n'a pas été validée.`);
+      }
+
+      console.log(`[OrdersService] DMS export successful, ref: ${dmsResult.dmsRef}`);
+      // L'export DMS met déjà à jour dmsRef dans la base, on met à jour notre instance
+      order.dmsRef = dmsResult.dmsRef;
+    }
+
     order.status = updateStatusDto.status;
     order.internalNotes = updateStatusDto.internalNotes ?? order.internalNotes;
     order.lastModifiedAt = new Date();
 
     const savedOrder = await this.orderRepository.save(order);
-
-    // Si le statut passe à VALIDATED, exporter vers le DMS
-    if (updateStatusDto.status === OrderStatus.VALIDATED && oldStatus !== OrderStatus.VALIDATED) {
-      console.log(`[OrdersService] Order ${savedOrder.orderNumber} validated, exporting to DMS...`);
-      const dmsResult = await this.exportOrderToDms(savedOrder.id);
-      if (dmsResult.success) {
-        console.log(`[OrdersService] DMS export successful, ref: ${dmsResult.dmsRef}`);
-      } else {
-        console.error(`[OrdersService] DMS export failed: ${dmsResult.error}`);
-        // On ne bloque pas la validation même si l'export DMS échoue
-        // L'admin pourra relancer l'export manuellement si nécessaire
-      }
-    }
 
     // Notifier le client et son entreprise du changement de statut (temps réel + DB)
     await this.notifyClientStatusChange(order, oldStatus, updateStatusDto.status, isAdmin);
@@ -561,11 +564,13 @@ export class OrdersService {
         const dmsOrderNumber = await this.generateDmsOrderNumber(pool, headerMapping.tableName, headerMapping.columns.numCommande);
         console.log(`[OrdersService] Generated DMS order number: ${dmsOrderNumber}`);
 
-        // Calculer le total TTC
+        // Calculer le total TTC et TVA
         let totalTTC = 0;
+        let totalTVA = 0;
         for (const item of order.items) {
           const lineHT = Number(item.lineTotal) || 0;
           const tvaRate = Number(item.tvaRate) || 0;
+          totalTVA += lineHT * (tvaRate / 100);
           totalTTC += lineHT * (1 + tvaRate / 100);
         }
 
@@ -574,19 +579,24 @@ export class OrdersService {
         const headerValues: any[] = [];
         const headerParams: string[] = [];
 
-        // Mapper les valeurs de l'entête - seules les colonnes mappées seront utilisées
+        // Mapper les valeurs de l'entête - conformité absolue au schéma utilisateur
         const headerData: Record<string, any> = {
           numCommande: dmsOrderNumber,
-          dateCommande: new Date(),
+          dateCommande: order.createdAt || new Date(),
           codeClient: order.company.dmsClientCode,
-          status: 0, // Statut initial dans le DMS (0 = en cours, à adapter selon votre DMS)
+          devise: null,
+          modeReg: 2,
+          dateLiv: new Date(),
           totalHT: Number(order.totalHt) || 0,
+          totalTVA: totalTVA,
           totalTTC: totalTTC,
+          status: 'E', // 'E' comme demandé
+          orderType: order.orderType === OrderType.QUICK ? 'U' : 'N', // 'U' pour rapide, 'N' pour stock
+          totalRemise: 0,
+          totalDC: 0,
+          designation: order.company.name,
+          adresseLivraison: null,
         };
-        // Ajouter observation seulement si mappé et non vide
-        if (headerMapping.columns.observation && headerMapping.columns.observation.trim() !== '') {
-          headerData.observation = order.clientNotes || order.vehicleInfo || '';
-        }
 
         let paramIndex = 1;
         for (const [localField, dmsColumn] of Object.entries(headerMapping.columns)) {
@@ -607,14 +617,16 @@ export class OrdersService {
           const headerRequest = pool.request();
           headerValues.forEach((value, index) => {
             const paramName = `p${index + 1}`;
-            if (value instanceof Date) {
+            if (value === null) {
+              headerRequest.input(paramName, sql.NVarChar, null);
+            } else if (value instanceof Date) {
               headerRequest.input(paramName, sql.DateTime, value);
             } else if (typeof value === 'number') {
               headerRequest.input(paramName, sql.Float, value);
             } else {
               // Essayer de convertir en nombre si c'est une chaîne numérique
               const numValue = Number(value);
-              if (!isNaN(numValue) && String(value).trim() !== '') {
+              if (!isNaN(numValue) && String(value).trim() !== '' && typeof value !== 'boolean') {
                 headerRequest.input(paramName, sql.Float, numValue);
               } else {
                 headerRequest.input(paramName, sql.NVarChar, String(value));
@@ -635,15 +647,21 @@ export class OrdersService {
 
           const detailData: Record<string, any> = {
             numCommande: dmsOrderNumber,
-            numLigne: i + 1,
             codeArticle: item.productRef,
-            designation: item.productName,
+            codeClient: order.company.dmsClientCode,
+            dateCommande: order.createdAt || new Date(),
+            devise: null,
+            modeReg: 2,
+            dateLiv: new Date(),
             quantite: item.quantity,
+            quantiteRecue: 0,
+            tauxTVA: tvaRate, // Déjà un nombre (ex: 19)
             prixUnitaire: Number(item.unitPrice) || 0,
-            remise: Number(item.discountPercent) || 0,
-            tauxTVA: tvaRate,
-            montantHT: lineHT,
-            montantTTC: lineTTC,
+            designation: item.productName,
+            remise: 0,
+            numDevis: -1,
+            dc: 0,
+            typeDC: 'P',
           };
 
           const detailColumns: string[] = [];
@@ -667,14 +685,16 @@ export class OrdersService {
             const detailRequest = pool.request();
             detailValues.forEach((value, index) => {
               const paramName = `p${index + 1}`;
-              if (value instanceof Date) {
+              if (value === null) {
+                detailRequest.input(paramName, sql.NVarChar, null);
+              } else if (value instanceof Date) {
                 detailRequest.input(paramName, sql.DateTime, value);
               } else if (typeof value === 'number') {
                 detailRequest.input(paramName, sql.Float, value);
               } else {
                 // Essayer de convertir en nombre si c'est une chaîne numérique
                 const numValue = Number(value);
-                if (!isNaN(numValue) && String(value).trim() !== '') {
+                if (!isNaN(numValue) && String(value).trim() !== '' && typeof value !== 'boolean') {
                   detailRequest.input(paramName, sql.Float, numValue);
                 } else {
                   detailRequest.input(paramName, sql.NVarChar, String(value));
