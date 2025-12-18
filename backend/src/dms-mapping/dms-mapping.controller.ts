@@ -44,6 +44,7 @@ export class DmsMappingController {
       bl_entete: 'BonsLivraison',
       bl_detail: 'BonsLivraison_Lignes',
       tva: 'TVA',
+      positions: 'Positions',
     };
     return {
       mappingType: type,

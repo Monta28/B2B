@@ -104,13 +104,18 @@ export interface CartItem extends Product {
 }
 
 export interface OrderItem {
+  id?: string;
   reference: string;
+  productRef?: string; // Alias for reference from backend
   designation: string;
+  productName?: string; // Alias for designation from backend
   quantity: number;
   unitPrice: number;
   totalLine: number;
+  lineTotal?: number; // Alias from backend
   availability?: 'DISPONIBLE' | 'RUPTURE'; // Disponibilité au moment de la commande
   tvaRate?: number; // Taux TVA en %
+  location?: string; // Emplacement en stock (Position)
 }
 
 export interface OrderDocumentRef {
@@ -121,6 +126,7 @@ export interface OrderDocumentRef {
 
 export interface Order {
   id: string;
+  orderNumber?: string; // N° de commande (ex: CMD-20251217-0001)
   orderType: OrderType; // STOCK or QUICK
   dmsRef?: string; // Peut être null si pas encore dans SQL Server
   isEditing?: boolean; // Verrouillage en cours de modification par client
@@ -128,12 +134,19 @@ export interface Order {
   editingByUser?: { id: string; fullName: string }; // Utilisateur qui modifie
   editingStartedAt?: string; // Quand la modification a commencé
   date: string;
+  createdAt?: string; // Date de création ISO
   lastModifiedAt?: string; // Timestamp ISO for safety cooldown
   status: OrderStatus;
   totalAmount: number;
+  totalHt?: number; // Total HT from backend
   itemCount: number;
+  companyId?: string;
   companyName?: string;
   userEmail?: string; // Qui a passé la commande
+  createdByUser?: { id: string; fullName: string }; // Utilisateur qui a créé la commande
+  vehicleInfo?: string; // Info véhicule
+  clientNotes?: string; // Notes client
+  internalNotes?: string; // Notes internes (admin)
   items?: OrderItem[]; // Détail des lignes
   documents?: OrderDocumentRef[]; // Liens directs
 }

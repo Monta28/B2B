@@ -209,6 +209,15 @@ export const api = {
     return fetchApi<any>(`/orders/${orderId}/print`, { method: 'POST' });
   },
 
+  // Get article positions from DMS for preparation slip
+  getOrderPositions: async (orderId: string): Promise<Record<string, string>> => {
+    try {
+      return await fetchApi<Record<string, string>>(`/orders/${orderId}/positions`);
+    } catch {
+      return {};
+    }
+  },
+
   // News
   getNews: async (activeOnly: boolean = false) => {
     const news = await fetchApi<any[]>(`/news${activeOnly ? '?activeOnly=true' : ''}`);

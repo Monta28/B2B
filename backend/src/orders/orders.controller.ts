@@ -14,6 +14,7 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { RolesGuard } from '../auth/roles.guard';
 import { Order } from '../entities/order.entity';
+import { DmsMappingService } from '../dms-mapping/dms-mapping.service';
 
 // Durée maximale d'édition avant expiration automatique (1 minute)
 const EDITING_TIMEOUT_MS = 1 * 60 * 1000;
@@ -69,7 +70,10 @@ function transformOrder(order: Order) {
 @Controller('orders')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class OrdersController {
-  constructor(private ordersService: OrdersService) {}
+  constructor(
+    private ordersService: OrdersService,
+    private dmsMappingService: DmsMappingService,
+  ) {}
 
   @Get()
   async findAll(@Request() req) {
@@ -113,6 +117,17 @@ export class OrdersController {
   @Post(':id/print')
   async printPreparation(@Param('id') id: string, @Request() req) {
     return this.ordersService.printPreparation(id, req.user);
+  }
+
+  // Get article positions from DMS for preparation slip
+  @Get(':id/positions')
+  async getItemPositions(@Param('id') id: string, @Request() req) {
+    const order = await this.ordersService.findOne(id, req.user);
+    if (!order.items || order.items.length === 0) {
+      return {};
+    }
+    const articleCodes = order.items.map(item => item.productRef);
+    return this.dmsMappingService.getArticlePositions(articleCodes);
   }
 
   @Patch(':id/editing')

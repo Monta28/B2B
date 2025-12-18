@@ -613,11 +613,163 @@ export const Orders = () => {
   });
 
   const handlePrintPreparation = async (orderId: string) => {
+    const order = orders?.find(o => o.id === orderId);
+    if (!order) {
+      toast.error("Commande non trouvée.");
+      return;
+    }
+
+    // Récupérer les positions des articles depuis le DMS
+    let positionsMap: Record<string, string> = {};
     try {
-      await api.printPreparationSlip(orderId);
-      toast.success("Le bon de préparation a été envoyé à l'imprimante.");
-    } catch (e) {
-      toast.error("Erreur lors de l'impression.");
+      positionsMap = await api.getOrderPositions(orderId);
+      console.log('[Orders] Positions loaded:', positionsMap);
+    } catch (err) {
+      console.warn('[Orders] Could not load positions:', err);
+      // Continue without positions
+    }
+
+    // Récupérer les valeurs avec fallback
+    const orderNum = order.orderNumber || order.dmsRef || order.id.slice(0, 8);
+    const orderDate = order.createdAt || order.date;
+    const formattedDate = orderDate ? new Date(orderDate).toLocaleDateString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '-';
+    const printedBy = user?.fullName || user?.email || 'Utilisateur';
+    const createdBy = order.createdByUser?.fullName || order.userEmail || '-';
+
+    // Générer le contenu HTML du bon de préparation
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bon de Préparation - ${orderNum}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+          .header h1 { font-size: 18px; margin-bottom: 5px; }
+          .header h2 { font-size: 14px; color: #666; font-weight: normal; }
+          .info-section { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .info-block { width: 48%; }
+          .info-block h3 { font-size: 12px; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 8px; }
+          .info-block p { margin: 3px 0; }
+          .info-block strong { display: inline-block; width: 100px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+          th { background-color: #f0f0f0; font-weight: bold; }
+          .qty-col { width: 60px; text-align: center; }
+          .ref-col { width: 120px; }
+          .check-col { width: 50px; text-align: center; }
+          .pos-col { width: 100px; }
+          .total-row { font-weight: bold; background-color: #f9f9f9; }
+          .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; }
+          .signature-section { display: flex; justify-content: space-between; margin-top: 40px; }
+          .signature-block { width: 45%; }
+          .signature-block p { border-bottom: 1px solid #333; padding-top: 30px; }
+          .notes { margin-top: 15px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd; }
+          @media print {
+            body { padding: 10px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${config?.companyName || 'MECACOMM'}</h1>
+          <h2>BON DE PRÉPARATION / PICKING</h2>
+        </div>
+
+        <div class="info-section">
+          <div class="info-block">
+            <h3>Informations Commande</h3>
+            <p><strong>N° Commande:</strong> ${orderNum}</p>
+            <p><strong>Date:</strong> ${formattedDate}</p>
+            <p><strong>Statut:</strong> ${ORDER_STATUS_LABELS[order.status]}</p>
+            ${order.vehicleInfo ? `<p><strong>Véhicule:</strong> ${order.vehicleInfo}</p>` : ''}
+            ${order.dmsRef ? `<p><strong>Réf. DMS:</strong> ${order.dmsRef}</p>` : ''}
+          </div>
+          <div class="info-block">
+            <h3>Client</h3>
+            <p><strong>Entreprise:</strong> ${order.companyName || '-'}</p>
+            <p><strong>Créée par:</strong> ${createdBy}</p>
+            <p><strong>Imprimé par:</strong> ${printedBy}</p>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th class="check-col">✓</th>
+              <th class="ref-col">Référence</th>
+              <th>Désignation</th>
+              <th class="qty-col">Qté</th>
+              <th class="pos-col">Emplacement</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items?.map((item: { productRef?: string; reference?: string; productName?: string; designation?: string; quantity: number; location?: string }) => {
+              const ref = item.productRef || item.reference || '';
+              const position = positionsMap[ref] || item.location || '-';
+              return `
+              <tr>
+                <td class="check-col">☐</td>
+                <td class="ref-col">${ref || '-'}</td>
+                <td>${item.productName || item.designation || '-'}</td>
+                <td class="qty-col"><strong>${item.quantity}</strong></td>
+                <td class="pos-col">${position}</td>
+              </tr>
+            `;}).join('') || '<tr><td colspan="5">Aucun article</td></tr>'}
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="3" style="text-align: right;">Total articles:</td>
+              <td class="qty-col">${order.items?.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0) || 0}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        ${order.clientNotes ? `
+          <div class="notes">
+            <strong>Notes client:</strong> ${order.clientNotes}
+          </div>
+        ` : ''}
+
+        ${order.vehicleInfo ? `
+          <div class="notes">
+            <strong>Véhicule:</strong> ${order.vehicleInfo}
+          </div>
+        ` : ''}
+
+        <div class="signature-section">
+          <div class="signature-block">
+            <p>Préparé par: _________________</p>
+          </div>
+          <div class="signature-block">
+            <p>Date: _________________</p>
+          </div>
+        </div>
+
+        <div class="footer" style="text-align: center; font-size: 10px; color: #666;">
+          Imprimé le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} par ${printedBy}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Ouvrir une nouvelle fenêtre et déclencher l'impression
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      // Attendre que le contenu soit chargé avant d'imprimer
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    } else {
+      toast.error("Impossible d'ouvrir la fenêtre d'impression. Vérifiez les paramètres du navigateur.");
     }
   };
 
@@ -1159,7 +1311,24 @@ export const Orders = () => {
         message={modalContent.message}
         isDestructive={modalContent.isDestructive}
         confirmLabel={modalContent.label}
-      />
+      >
+        {confirmAction?.status === OrderStatus.VALIDATED && (
+          <label className="flex items-center justify-center gap-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={printOnValidate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrintOnValidate(e.target.checked)}
+              className="w-4 h-4 rounded border-accent/40 bg-brand-800 text-accent focus:ring-accent/40 focus:ring-offset-0 cursor-pointer"
+            />
+            <span className="text-sm text-slate-300 group-hover:text-white transition-colors flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimer le bon de préparation
+            </span>
+          </label>
+        )}
+      </ConfirmModal>
 
       {/* Modal de confirmation de fermeture du modal d'édition */}
       <ConfirmModal

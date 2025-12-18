@@ -9,7 +9,8 @@ export type DmsMappingType =
   | 'factures_detail'
   | 'bl_entete'
   | 'bl_detail'
-  | 'tva';
+  | 'tva'
+  | 'positions'; // Table des positions/emplacements
 
 @Entity('dms_mappings')
 export class DmsMapping {

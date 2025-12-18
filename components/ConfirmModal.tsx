@@ -10,6 +10,7 @@ interface ConfirmModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   isDestructive?: boolean;
+  children?: React.ReactNode;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -21,6 +22,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmLabel = 'Confirmer',
   cancelLabel = 'Annuler',
   isDestructive = false,
+  children,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,9 +45,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </div>
           
           <h3 className="text-lg font-bold text-center text-white mb-2">{title}</h3>
-          <div className="text-sm text-center text-slate-400 mb-6">
+          <div className="text-sm text-center text-slate-400 mb-4">
             {message}
           </div>
+
+          {children && (
+            <div className="mb-4">
+              {children}
+            </div>
+          )}
 
           <div className="flex space-x-3">
             <button
