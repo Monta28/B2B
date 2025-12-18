@@ -1,5 +1,5 @@
-# Docker Compose pour MECACOMM B2B
-# Usage: docker compose up -d
+# Docker Compose pour Ubuntu (déploiement complet avec PostgreSQL)
+# Usage: docker compose -f docker-compose.ubuntu.yml up -d
 
 services:
   # Base de données PostgreSQL
