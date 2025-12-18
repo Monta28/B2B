@@ -142,11 +142,8 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
     taux: 'Taux (%)',
   },
   positions: {
-    codeArticle: 'Code Article',
-    position: 'Position / Emplacement',
-    zone: 'Zone',
-    rayon: 'Rayon',
-    etagere: 'Étagère',
+    id: 'ID Position',
+    nom: 'Nom Position',
   },
 };
 

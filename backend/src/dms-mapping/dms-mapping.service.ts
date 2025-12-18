@@ -121,13 +121,11 @@ export const DEFAULT_MAPPINGS: Record<string, Record<string, string>> = {
     codeTva: 'Code_TVA',
     taux: 'Taux',
   },
-  // Table Positions/Emplacements (code article -> position)
+  // Table Positions/Emplacements (id -> nom)
+  // La table Articles contient une colonne Position qui référence l'ID de cette table
   positions: {
-    codeArticle: 'Code_Article',
-    position: 'Position',
-    zone: 'Zone',
-    rayon: 'Rayon',
-    etagere: 'Etagere',
+    id: 'ID',
+    nom: 'Nom',
   },
 };
 
@@ -420,14 +418,23 @@ export class DmsMappingService {
     }
   }
 
-  // Get article positions from DMS (like TVA lookup)
+  // Get article positions from DMS (JOIN between Articles and Positions tables)
+  // Articles table contains a Position column (ID) that references Positions table (id -> nom)
   async getArticlePositions(articleCodes: string[]): Promise<Record<string, string>> {
     if (!articleCodes || articleCodes.length === 0) {
       return {};
     }
 
-    const mappingConfig = await this.getMappingConfig('positions');
-    if (!mappingConfig) {
+    // Get both mappings: articles (for the position ID column) and positions (for the lookup table)
+    const articlesMapping = await this.getMappingConfig('articles');
+    const positionsMapping = await this.getMappingConfig('positions');
+
+    if (!articlesMapping) {
+      console.log('[DmsMappingService] No articles mapping configured');
+      return {};
+    }
+
+    if (!positionsMapping) {
       console.log('[DmsMappingService] No positions mapping configured');
       return {};
     }
@@ -438,8 +445,13 @@ export class DmsMappingService {
     }
 
     try {
-      const codeArticleCol = mappingConfig.columns.codeArticle || 'Code_Article';
-      const positionCol = mappingConfig.columns.position || 'Position';
+      // Articles table columns
+      const articleCodeCol = articlesMapping.columns.reference || articlesMapping.columns.id || 'Code_Article';
+      const articlePositionCol = articlesMapping.columns.location || 'Position';
+
+      // Positions table columns
+      const positionIdCol = positionsMapping.columns.id || 'ID';
+      const positionNomCol = positionsMapping.columns.nom || 'Nom';
 
       // Build parameterized query for multiple article codes
       const placeholders = articleCodes.map((_, i) => `@code${i}`).join(', ');
@@ -448,17 +460,23 @@ export class DmsMappingService {
         request.input(`code${i}`, sql.NVarChar, code);
       });
 
+      // JOIN Articles with Positions to get the position name
       const query = `
-        SELECT [${codeArticleCol}] as codeArticle, [${positionCol}] as position
-        FROM [${mappingConfig.tableName}]
-        WHERE [${codeArticleCol}] IN (${placeholders})
+        SELECT a.[${articleCodeCol}] as codeArticle, p.[${positionNomCol}] as position
+        FROM [${articlesMapping.tableName}] a
+        LEFT JOIN [${positionsMapping.tableName}] p ON a.[${articlePositionCol}] = p.[${positionIdCol}]
+        WHERE a.[${articleCodeCol}] IN (${placeholders})
       `;
 
-      console.log('[DmsMappingService] Fetching positions:', { tableName: mappingConfig.tableName, articleCodes });
+      console.log('[DmsMappingService] Fetching positions with JOIN:', {
+        articlesTable: articlesMapping.tableName,
+        positionsTable: positionsMapping.tableName,
+        articleCodes,
+      });
       const result = await request.query(query);
       await pool.close();
 
-      // Build lookup map: articleCode -> position
+      // Build lookup map: articleCode -> position name
       const positionsMap: Record<string, string> = {};
       for (const row of result.recordset) {
         if (row.codeArticle && row.position) {
