@@ -1,25 +1,4 @@
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: mecacomm-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_DATABASE:-mecacomm_b2b}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - mecacomm-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backend NestJS
   backend:
     build:
@@ -28,8 +7,8 @@ services:
     container_name: mecacomm-backend
     restart: unless-stopped
     environment:
-      # PostgreSQL
-      DB_HOST: postgres
+      # PostgreSQL - connexion vers Windows host
+      DB_HOST: host.docker.internal
       DB_PORT: 5432
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -39,7 +18,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       # Server
       PORT: 4001
-      # SQL Server DMS (optional - configure if needed)
+      # SQL Server DMS (optional)
       SQL_SERVER_HOST: ${SQL_SERVER_HOST:-}
       SQL_SERVER_PORT: ${SQL_SERVER_PORT:-1433}
       SQL_SERVER_USER: ${SQL_SERVER_USER:-}
@@ -47,11 +26,8 @@ services:
       SQL_SERVER_DATABASE: ${SQL_SERVER_DATABASE:-}
     ports:
       - "4001:4001"
-    networks:
-      - mecacomm-network
-    depends_on:
-      postgres:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Frontend React/Vite with Nginx
   frontend:
@@ -62,14 +38,5 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-    networks:
-      - mecacomm-network
     depends_on:
       - backend
-
-networks:
-  mecacomm-network:
-    driver: bridge
-
-volumes:
-  postgres_data:

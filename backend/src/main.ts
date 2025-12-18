@@ -10,9 +10,23 @@ async function bootstrap() {
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
+  // Ports from environment
+  const backendPort = process.env.BACKEND_PORT || process.env.PORT || 4001;
+  const frontendPort = process.env.FRONTEND_PORT || 4000;
+
   // Enable CORS for frontend
+  const defaultOrigins = [
+    `http://localhost:${frontendPort}`,
+    `http://localhost:${backendPort}`,
+    'http://localhost',
+    'http://localhost:80',
+  ];
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : defaultOrigins;
+
   app.enableCors({
-    origin: ['http://localhost:4000', 'http://localhost:4001', 'http://localhost:4002'],
+    origin: corsOrigins,
     credentials: true,
   });
 
@@ -25,8 +39,7 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`🚀 Backend running on http://localhost:${port}/api`);
+  await app.listen(backendPort);
+  console.log(`🚀 Backend running on http://localhost:${backendPort}/api`);
 }
 bootstrap();

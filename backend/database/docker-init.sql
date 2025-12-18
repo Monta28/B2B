@@ -1,5 +1,5 @@
 -- =============================================
--- MECACOMM B2B - Script d'initialisation PostgreSQL
+-- MECACOMM B2B - Script d'initialisation Docker PostgreSQL
 -- Version consolidée avec toutes les migrations
 -- Date: 2025-12-18
 -- =============================================
@@ -42,14 +42,12 @@ END $$;
 
 -- =============================================
 -- TABLE: app_config
--- Inclut les colonnes d'identité visuelle (branding)
 -- =============================================
 CREATE TABLE IF NOT EXISTS app_config (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_name VARCHAR(255) DEFAULT 'MECACOMM',
     logo_url VARCHAR(500),
     primary_color VARCHAR(20) DEFAULT '#1976d2',
-    -- Colonnes branding/identité visuelle
     secondary_color VARCHAR(20) DEFAULT '#64748b',
     accent_color VARCHAR(20) DEFAULT '#06b6d4',
     dark_mode_bg VARCHAR(20) DEFAULT '#1A1F2E',
@@ -59,12 +57,10 @@ CREATE TABLE IF NOT EXISTS app_config (
     font_family VARCHAR(100) DEFAULT 'Inter',
     border_radius_style VARCHAR(20) DEFAULT 'rounded',
     favicon_url VARCHAR(500),
-    -- Autres paramètres
     default_discount NUMERIC(5,2) DEFAULT 0,
     order_cooldown_minutes INTEGER DEFAULT 30,
     weather_city VARCHAR(100) DEFAULT 'Tunis',
     weather_country VARCHAR(10) DEFAULT 'TN',
-    -- SQL Server DMS Connection
     sql_server_host VARCHAR(255),
     sql_server_port INTEGER DEFAULT 1433,
     sql_server_user VARCHAR(255),
@@ -93,7 +89,6 @@ CREATE TABLE IF NOT EXISTS companies (
 
 -- =============================================
 -- TABLE: users
--- Inclut la colonne username pour connexion
 -- =============================================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -138,7 +133,6 @@ CREATE TABLE IF NOT EXISTS carts (
 
 -- =============================================
 -- TABLE: cart_items
--- Précision 3 décimales pour unit_price et line_total
 -- =============================================
 CREATE TABLE IF NOT EXISTS cart_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -154,8 +148,6 @@ CREATE TABLE IF NOT EXISTS cart_items (
 
 -- =============================================
 -- TABLE: orders
--- Précision 3 décimales pour total_ht
--- Inclut la colonne is_editing pour verrouillage
 -- =============================================
 CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -177,8 +169,6 @@ CREATE TABLE IF NOT EXISTS orders (
 
 -- =============================================
 -- TABLE: order_items
--- Précision 3 décimales pour unit_price et line_total
--- Inclut la colonne tva_rate
 -- =============================================
 CREATE TABLE IF NOT EXISTS order_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -243,29 +233,22 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_company ON users(company_id);
 CREATE INDEX IF NOT EXISTS idx_users_dms_code ON users(dms_client_code);
-
 CREATE INDEX IF NOT EXISTS idx_companies_dms_code ON companies(dms_client_code);
-
 CREATE INDEX IF NOT EXISTS idx_orders_company ON orders(company_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number);
-
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
-
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
-
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
-
 CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_id);
-
 CREATE INDEX IF NOT EXISTS idx_dms_mappings_type ON dms_mappings(mapping_type);
 
 -- =============================================
--- TRIGGERS pour updated_at
+-- TRIGGERS
 -- =============================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -300,67 +283,21 @@ CREATE TRIGGER update_dms_mappings_updated_at BEFORE UPDATE ON dms_mappings FOR 
 -- DONNEES INITIALES
 -- =============================================
 
--- Configuration par défaut de l'application
-INSERT INTO app_config (
-    company_name,
-    primary_color,
-    secondary_color,
-    accent_color,
-    dark_mode_bg,
-    light_mode_bg,
-    font_family,
-    border_radius_style,
-    default_discount,
-    order_cooldown_minutes,
-    weather_city,
-    weather_country
-) VALUES (
-    'MECACOMM',
-    '#1976d2',
-    '#64748b',
-    '#06b6d4',
-    '#1A1F2E',
-    '#F5F3EF',
-    'Inter',
-    'rounded',
-    0,
-    30,
-    'Tunis',
-    'TN'
-) ON CONFLICT DO NOTHING;
+-- Configuration par défaut
+INSERT INTO app_config (company_name, primary_color, default_discount, order_cooldown_minutes, weather_city, weather_country)
+VALUES ('MECACOMM', '#1976d2', 0, 30, 'Tunis', 'TN')
+ON CONFLICT DO NOTHING;
 
--- Société par défaut pour l'administrateur système
-INSERT INTO companies (
-    id,
-    name,
-    dms_client_code,
-    address,
-    phone,
-    email_contact,
-    is_active
-) VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'Administration Système',
-    'ADMIN',
-    'Système',
-    '',
-    'admin@mecacomm.local',
-    TRUE
-) ON CONFLICT DO NOTHING;
+-- Société système pour admin
+INSERT INTO companies (id, name, dms_client_code, address, email_contact, is_active)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Administration Système', 'ADMIN', 'Système', 'admin@mecacomm.local', TRUE)
+ON CONFLICT DO NOTHING;
 
--- Utilisateur administrateur par défaut
--- Mot de passe: sysadmin (hashé avec bcrypt, rounds=10)
--- IMPORTANT: Changez ce mot de passe après le premier déploiement!
-INSERT INTO users (
-    id,
-    company_id,
-    email,
-    username,
-    password_hash,
-    full_name,
-    role,
-    is_active
-) VALUES (
+-- Admin système par défaut
+-- Mot de passe: sysadmin
+-- Hash bcrypt généré avec cost 10
+INSERT INTO users (id, company_id, email, username, password_hash, full_name, role, is_active)
+VALUES (
     '00000000-0000-0000-0000-000000000002',
     '00000000-0000-0000-0000-000000000001',
     'sysadmin@mecacomm.com',
@@ -371,7 +308,4 @@ INSERT INTO users (
     TRUE
 ) ON CONFLICT DO NOTHING;
 
--- =============================================
--- FIN DU SCRIPT
--- =============================================
-SELECT 'Base de données MECACOMM B2B initialisée avec succès!' AS message;
+SELECT 'Base de données MECACOMM B2B initialisée!' AS message;

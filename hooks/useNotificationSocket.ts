@@ -15,7 +15,8 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
   useEffect(() => {
     if (!user) return;
 
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+    const backendPort = import.meta.env.VITE_BACKEND_PORT || process.env.BACKEND_PORT || '4001';
+    const backendUrl = import.meta.env.VITE_API_URL || `http://localhost:${backendPort}`;
     const socket = io(`${backendUrl}/notifications`, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
