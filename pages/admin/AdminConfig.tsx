@@ -16,7 +16,8 @@ type DmsMappingType =
   | 'factures_detail'
   | 'bl_entete'
   | 'bl_detail'
-  | 'tva';
+  | 'tva'
+  | 'positions';
 
 interface DmsColumnInfo {
   name: string;
@@ -36,6 +37,7 @@ const MAPPING_TYPE_LABELS: Record<DmsMappingType, string> = {
   bl_entete: 'Bons de Livraison (Entête)',
   bl_detail: 'Bons de Livraison (Détail)',
   tva: 'Table TVA',
+  positions: 'Positions / Emplacements',
 };
 
 // Default field labels for each mapping type
@@ -138,6 +140,13 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
   tva: {
     codeTva: 'Code TVA',
     taux: 'Taux (%)',
+  },
+  positions: {
+    codeArticle: 'Code Article',
+    position: 'Position / Emplacement',
+    zone: 'Zone',
+    rayon: 'Rayon',
+    etagere: 'Étagère',
   },
 };
 
