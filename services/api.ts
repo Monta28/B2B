@@ -1,7 +1,25 @@
 // Real API service - replaces mockApi.ts
 import { getToken, saveToken, clearToken } from './auth-storage';
 
-const API_BASE_URL = '/api';
+// En production, utiliser l'URL complète du backend
+// En développement, utiliser le proxy Vite (/api)
+const getApiBaseUrl = () => {
+  // Si VITE_API_URL est défini, l'utiliser
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // En mode développement avec Vite, utiliser le proxy
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+
+  // En production, construire l'URL avec le port backend
+  const backendPort = import.meta.env.VITE_BACKEND_PORT || '4001';
+  return `http://${window.location.hostname}:${backendPort}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Helper function for API calls
 async function fetchApi<T>(
