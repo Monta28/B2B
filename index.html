@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoPart DMS Connect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            colors: {
+              // Futuristic Dark Theme Palette - Lighter version
+              brand: {
+                950: '#0f172a', // Lighter base (was #030712)
+                900: '#1e293b', // Lighter deep (was #0a0f1a)
+                800: '#334155', // Lighter surface (was #111827)
+                700: '#475569', // Elevated surface (was #1f2937)
+                600: '#64748b', // Muted (was #374151)
+                500: '#94a3b8',
+                400: '#cbd5e1',
+                300: '#e2e8f0',
+                200: '#f1f5f9',
+                100: '#f8fafc',
+                50: '#1e293b',  // Main dark background
+              },
+              accent: {
+                DEFAULT: '#3b82f6', // Professional blue
+                hover: '#60a5fa',
+                light: '#2563eb',
+                dark: '#1d4ed8',
+                glow: 'rgba(59, 130, 246, 0.3)',
+              },
+              neon: {
+                cyan: '#3b82f6',    // Blue (same as accent)
+                purple: '#6366f1',  // Indigo - softer
+                pink: '#ef4444',    // Red for errors/danger
+                blue: '#3b82f6',
+                green: '#22c55e',   // Success green
+                orange: '#f59e0b',  // Warning amber
+              },
+              glass: {
+                light: 'rgba(255, 255, 255, 0.05)',
+                medium: 'rgba(255, 255, 255, 0.1)',
+                heavy: 'rgba(255, 255, 255, 0.15)',
+              },
+              surface: 'rgba(17, 24, 39, 0.8)',
+            },
+            boxShadow: {
+              'soft': '0 2px 15px rgba(0, 0, 0, 0.2)',
+              'card': '0 4px 20px rgba(0, 0, 0, 0.25)',
+              'card-hover': '0 8px 30px rgba(0, 0, 0, 0.3)',
+              'glow': '0 0 20px rgba(59, 130, 246, 0.15)',
+              'glow-purple': '0 0 20px rgba(99, 102, 241, 0.15)',
+              'glow-pink': '0 0 20px rgba(239, 68, 68, 0.15)',
+              'neon': '0 0 5px currentColor',
+              'inner-glow': 'inset 0 0 15px rgba(59, 130, 246, 0.05)',
+            },
+            backgroundImage: {
+              'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+              'gradient-cyber': 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%)',
+              'gradient-neon': 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%)',
+              'grid-pattern': 'linear-gradient(rgba(59, 130, 246, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.02) 1px, transparent 1px)',
+            },
+            animation: {
+              'fadeIn': 'fadeIn 0.4s ease-out forwards',
+              'slideUp': 'slideUp 0.5s ease-out forwards',
+              'marquee': 'marquee 40s linear infinite',
+              'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+              'float': 'float 6s ease-in-out infinite',
+              'shimmer': 'shimmer 2s linear infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              marquee: {
+                '0%': { transform: 'translateX(100%)' },
+                '100%': { transform: 'translateX(-100%)' },
+              },
+              pulseGlow: {
+                '0%, 100%': { boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)' },
+                '50%': { boxShadow: '0 0 25px rgba(59, 130, 246, 0.35)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' },
+              },
+            },
+            backdropBlur: {
+              xs: '2px',
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Import Inter Font for Professional Look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        min-height: 100vh;
+      }
+
+      /* Smooth transitions for all interactive elements */
+      button, a, input, select, tr { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* Glass morphism utilities */
+      .glass {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .glass-light {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      /* ========================================
+         MODALES & POPUPS - DARK MODE (OPAQUE)
+      ======================================== */
+      /* Modal container - solid background in dark mode */
+      .fixed.inset-0 .card-futuristic,
+      .fixed.inset-0 .glass,
+      [class*="z-[100]"] .card-futuristic,
+      [class*="z-[100]"] .glass {
+        background: #1e293b !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(59, 130, 246, 0.15) !important;
+      }
+
+      /* Modal glass-light buttons - solid in dark mode */
+      .fixed.inset-0 .glass-light,
+      .fixed.inset-0 button.glass-light,
+      [class*="z-[100]"] .glass-light,
+      [class*="z-[100]"] button.glass-light {
+        background: #334155 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-color: rgba(59, 130, 246, 0.25) !important;
+      }
+
+      .fixed.inset-0 button.glass-light:hover,
+      [class*="z-[100]"] button.glass-light:hover {
+        background: #475569 !important;
+        border-color: rgba(59, 130, 246, 0.4) !important;
+      }
+
+      /* Modal inner elements - solid backgrounds */
+      .fixed.inset-0 .bg-brand-800\/50,
+      .fixed.inset-0 .bg-brand-800\/60,
+      .fixed.inset-0 .bg-brand-900\/50,
+      [class*="z-[100]"] .bg-brand-800\/50,
+      [class*="z-[100]"] .bg-brand-800\/60 {
+        background-color: #334155 !important;
+      }
+
+      /* ========================================
+         UNIFIED TABLE STYLES - ALL PAGES
+      ======================================== */
+      /* Table container */
+      .card-futuristic table {
+        border-collapse: collapse;
+      }
+
+      /* Table header - unified style */
+      .card-futuristic thead {
+        background: rgba(30, 41, 59, 0.5) !important;
+      }
+
+      .card-futuristic thead th {
+        padding: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+        white-space: nowrap;
+      }
+
+      /* Filter inputs in header - unified */
+      .card-futuristic thead input,
+      .card-futuristic thead select {
+        width: 100%;
+        padding: 4px 8px;
+        font-size: 11px;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        background-color: rgba(51, 65, 85, 0.6);
+        color: #f1f5f9;
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+
+      .card-futuristic thead input::placeholder {
+        color: #64748b;
+      }
+
+      .card-futuristic thead input:focus,
+      .card-futuristic thead select:focus {
+        outline: none;
+        border-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+      }
+
+      /* Table body */
+      .card-futuristic tbody tr {
+        transition: background-color 0.15s ease;
+      }
+
+      .card-futuristic tbody tr:hover {
+        background-color: rgba(59, 130, 246, 0.08) !important;
+      }
+
+      .card-futuristic tbody td {
+        padding: 12px;
+        font-size: 13px;
+        color: #e2e8f0;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+      }
+
+      /* Dividers */
+      .card-futuristic .divide-y > :not([hidden]) ~ :not([hidden]),
+      .card-futuristic .divide-accent\/10 > :not([hidden]) ~ :not([hidden]) {
+        border-color: rgba(59, 130, 246, 0.1);
+      }
+
+      /* Pagination bar */
+      .card-futuristic .bg-brand-900\/40,
+      .card-futuristic .bg-brand-900\/50 {
+        background-color: rgba(30, 41, 59, 0.5) !important;
+      }
+
+      /* Neon text effect */
+      .text-neon {
+        text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+      }
+
+      /* Gradient border */
+      .border-gradient {
+        border: 1px solid transparent;
+        background: linear-gradient(#1e293b, #1e293b) padding-box,
+                    linear-gradient(135deg, #3b82f6, #6366f1) border-box;
+      }
+
+      /* Custom Scrollbar - Professional */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      /* Grid background pattern */
+      .bg-grid {
+        background-size: 50px 50px;
+        background-image:
+          linear-gradient(rgba(59, 130, 246, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.02) 1px, transparent 1px);
+      }
+
+      /* Glow effect on focus */
+      input:focus, select:focus, textarea:focus {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 10px rgba(59, 130, 246, 0.1);
+      }
+
+      /* Animated gradient background */
+      .bg-animated-gradient {
+        background: linear-gradient(-45deg, #1e293b, #334155, #1e293b, #0f172a);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+      }
+
+      @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      /* Card hover effect */
+      .card-futuristic {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .card-futuristic:hover {
+        border-color: rgba(59, 130, 246, 0.3);
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
+        transform: translateY(-2px);
+      }
+
+      /* ========================================
+         DROPDOWNS / SEARCH RESULTS - DARK MODE (OPAQUE)
+      ======================================== */
+      /* Search dropdown results - solid background in dark mode */
+      .absolute.card-futuristic,
+      .card-futuristic.max-h-80,
+      .card-futuristic[class*="overflow-auto"],
+      [class*="z-50"].card-futuristic {
+        background: #1e293b !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.15) !important;
+      }
+
+      /* Dropdown item hover in dark mode */
+      .absolute.card-futuristic .hover\:bg-brand-800\/60:hover,
+      .card-futuristic.max-h-80 .hover\:bg-brand-800\/60:hover {
+        background-color: rgba(51, 65, 85, 0.8) !important;
+      }
+
+      /* Highlighted item in dark mode */
+      .absolute.card-futuristic .bg-accent\/20,
+      .card-futuristic.max-h-80 .bg-accent\/20 {
+        background-color: rgba(59, 130, 246, 0.2) !important;
+      }
+
+      /* Button glow effect */
+      .btn-glow {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn-glow::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+      }
+
+      .btn-glow:hover::before {
+        left: 100%;
+      }
+
+      /* Fix combobox/select dropdown visibility */
+      select option {
+        background: #1e293b;
+        color: #f1f5f9;
+        padding: 8px;
+      }
+      select option:hover,
+      select option:focus,
+      select option:checked {
+        background: #334155;
+        color: #ffffff;
+      }
+
+      /* ========================================
+         LIGHT MODE STYLES
+         Professional light theme (not too bright)
+      ======================================== */
+      .light-mode {
+        --bg-primary: #e2e8f0;
+        --bg-secondary: #cbd5e1;
+        --bg-surface: #f1f5f9;
+        --bg-card: rgba(255, 255, 255, 0.95);
+        --text-primary: #0f172a;
+        --text-secondary: #334155;
+        --text-muted: #475569;
+        --border-color: rgba(30, 41, 59, 0.2);
+        --accent-glow: rgba(59, 130, 246, 0.3);
+      }
+
+      .light-mode body {
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%) !important;
+      }
+
+      .light-mode .bg-brand-950,
+      .light-mode .bg-brand-900 {
+        background-color: #e8eef5 !important;
+      }
+
+      .light-mode .bg-brand-800,
+      .light-mode .bg-brand-800\/60,
+      .light-mode .bg-brand-800\/40,
+      .light-mode .bg-brand-800\/30 {
+        background-color: rgba(226, 232, 240, 0.9) !important;
+      }
+
+      .light-mode .bg-brand-900\/50,
+      .light-mode .bg-brand-900\/30 {
+        background-color: rgba(226, 232, 240, 0.7) !important;
+      }
+
+      /* Zone du bouton déconnexion - fond plus clair */
+      .light-mode .bg-brand-950\/50 {
+        background-color: rgba(241, 245, 249, 0.9) !important;
+      }
+
+      /* Text colors - darker for better contrast */
+      .light-mode .text-white {
+        color: #0f172a !important;
+      }
+
+      .light-mode .text-slate-100 {
+        color: #1e293b !important;
+      }
+
+      .light-mode .text-slate-200 {
+        color: #334155 !important;
+      }
+
+      .light-mode .text-slate-300 {
+        color: #475569 !important;
+      }
+
+      .light-mode .text-slate-400 {
+        color: #64748b !important;
+      }
+
+      .light-mode .text-slate-500 {
+        color: #64748b !important;
+      }
+
+      .light-mode .text-slate-600 {
+        color: #94a3b8 !important;
+      }
+
+      /* Glass and cards */
+      .light-mode .glass,
+      .light-mode .card-futuristic {
+        background: rgba(255, 255, 255, 0.92) !important;
+        border-color: rgba(30, 41, 59, 0.15) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+      }
+
+      .light-mode .glass-light {
+        background: rgba(255, 255, 255, 0.7) !important;
+        border-color: rgba(30, 41, 59, 0.12) !important;
+      }
+
+      /* Inputs - better visibility */
+      .light-mode input,
+      .light-mode select,
+      .light-mode textarea {
+        background-color: #ffffff !important;
+        border-color: rgba(30, 41, 59, 0.25) !important;
+        color: #0f172a !important;
+      }
+
+      .light-mode input::placeholder,
+      .light-mode textarea::placeholder {
+        color: #64748b !important;
+      }
+
+      .light-mode input:focus,
+      .light-mode select:focus,
+      .light-mode textarea:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 0 10px rgba(59, 130, 246, 0.15) !important;
+      }
+
+      .light-mode select option {
+        background: #ffffff;
+        color: #0f172a;
+      }
+
+      .light-mode select option:hover,
+      .light-mode select option:focus,
+      .light-mode select option:checked {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+
+      /* Borders - more visible */
+      .light-mode .border-accent\/10,
+      .light-mode .border-accent\/20,
+      .light-mode .border-accent\/30 {
+        border-color: rgba(59, 130, 246, 0.25) !important;
+      }
+
+      .light-mode .divide-accent\/10 > :not([hidden]) ~ :not([hidden]) {
+        border-color: rgba(59, 130, 246, 0.2) !important;
+      }
+
+      /* Scrollbar */
+      .light-mode ::-webkit-scrollbar-track {
+        background: #e2e8f0;
+      }
+
+      .light-mode ::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+      }
+
+      .light-mode ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      /* Grid pattern - more visible */
+      .light-mode .bg-grid {
+        background-image:
+          linear-gradient(rgba(59, 130, 246, 0.12) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.12) 1px, transparent 1px);
+      }
+
+      /* Shadows */
+      .light-mode .shadow-glow {
+        box-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
+      }
+
+      .light-mode .shadow-card {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      }
+
+      .light-mode .shadow-inner-glow {
+        box-shadow: inset 0 0 15px rgba(59, 130, 246, 0.1) !important;
+      }
+
+      .light-mode .bg-gradient-to-br.from-accent {
+        background: linear-gradient(to bottom right, #3b82f6, #2563eb) !important;
+      }
+
+      /* Table rows hover */
+      .light-mode tr:hover {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+      }
+
+      .light-mode .card-futuristic:hover {
+        border-color: rgba(59, 130, 246, 0.4) !important;
+        box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+      }
+
+      /* Accent colors - more vibrant in light mode */
+      .light-mode .text-accent {
+        color: #1d4ed8 !important;
+      }
+
+      .light-mode .bg-accent {
+        background-color: #3b82f6 !important;
+      }
+
+      .light-mode .bg-accent\/10,
+      .light-mode .bg-accent\/15,
+      .light-mode .bg-accent\/20 {
+        background-color: rgba(59, 130, 246, 0.18) !important;
+      }
+
+      /* Neon colors - adjust for light mode visibility */
+      .light-mode .text-neon-purple {
+        color: #4f46e5 !important;
+      }
+
+      .light-mode .text-neon-green {
+        color: #16a34a !important;
+      }
+
+      .light-mode .text-neon-pink {
+        color: #dc2626 !important;
+      }
+
+      .light-mode .text-neon-orange {
+        color: #d97706 !important;
+      }
+
+      .light-mode .text-neon-blue {
+        color: #2563eb !important;
+      }
+
+      .light-mode .bg-neon-purple\/20 {
+        background-color: rgba(79, 70, 229, 0.15) !important;
+      }
+
+      .light-mode .bg-neon-green\/20 {
+        background-color: rgba(22, 163, 74, 0.15) !important;
+      }
+
+      .light-mode .bg-neon-pink\/20 {
+        background-color: rgba(220, 38, 38, 0.15) !important;
+      }
+
+      .light-mode .bg-neon-orange\/20,
+      .light-mode .bg-neon-orange\/10 {
+        background-color: rgba(217, 119, 6, 0.15) !important;
+      }
+
+      .light-mode .border-neon-purple\/30 {
+        border-color: rgba(79, 70, 229, 0.35) !important;
+      }
+
+      .light-mode .border-neon-green\/30 {
+        border-color: rgba(22, 163, 74, 0.35) !important;
+      }
+
+      .light-mode .border-neon-pink\/30 {
+        border-color: rgba(220, 38, 38, 0.35) !important;
+      }
+
+      .light-mode .border-neon-orange\/30 {
+        border-color: rgba(217, 119, 6, 0.35) !important;
+      }
+
+      /* Navbar in light mode */
+      .light-mode nav.glass,
+      .light-mode header.glass {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-color: rgba(30, 41, 59, 0.12) !important;
+      }
+
+      /* Sidebar selected item */
+      .light-mode .bg-accent\/15 {
+        background-color: rgba(59, 130, 246, 0.2) !important;
+      }
+
+      .light-mode .border-accent\/50 {
+        border-color: rgba(59, 130, 246, 0.5) !important;
+      }
+
+      /* Badges and tags */
+      .light-mode .font-mono {
+        color: inherit;
+      }
+
+      .light-mode span.bg-brand-800\/60 {
+        background-color: rgba(203, 213, 225, 0.9) !important;
+        color: #1e293b !important;
+      }
+
+      /* Modal backdrop */
+      .light-mode .bg-black\/60,
+      .light-mode .bg-black\/70 {
+        background-color: rgba(15, 23, 42, 0.5) !important;
+      }
+
+      /* Animated background orbs - lighter for light mode */
+      .light-mode .bg-accent\/10 {
+        background-color: rgba(59, 130, 246, 0.08) !important;
+      }
+
+      .light-mode .bg-accent\/5 {
+        background-color: rgba(59, 130, 246, 0.05) !important;
+      }
+
+      .light-mode .bg-neon-purple\/10 {
+        background-color: rgba(79, 70, 229, 0.08) !important;
+      }
+
+      /* Links and interactive elements */
+      .light-mode a.text-slate-500:hover,
+      .light-mode button.text-slate-500:hover {
+        color: #1d4ed8 !important;
+      }
+
+      /* Checkbox and radio buttons */
+      .light-mode input[type="checkbox"],
+      .light-mode input[type="radio"] {
+        accent-color: #3b82f6;
+      }
+
+      /* Theme toggle button */
+      .theme-toggle {
+        transition: all 0.3s ease;
+      }
+
+      .theme-toggle:hover {
+        transform: rotate(15deg);
+      }
+
+      /* Login page specific - light mode */
+      .light-mode .min-h-screen.bg-brand-950 {
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%) !important;
+      }
+
+      /* Feature cards on login */
+      .light-mode .bg-brand-800\/40 {
+        background-color: rgba(255, 255, 255, 0.7) !important;
+      }
+
+      /* Gradient backgrounds */
+      .light-mode .from-transparent {
+        --tw-gradient-from: transparent !important;
+      }
+
+      .light-mode .via-accent\/30 {
+        --tw-gradient-stops: var(--tw-gradient-from), rgba(59, 130, 246, 0.35), var(--tw-gradient-to) !important;
+      }
+
+      /* News/Actualités section - light mode */
+      .light-mode .bg-brand-800\/20 {
+        background-color: rgba(241, 245, 249, 0.8) !important;
+      }
+
+      .light-mode .bg-brand-800\/30 {
+        background-color: rgba(226, 232, 240, 0.6) !important;
+      }
+
+      .light-mode .hover\:bg-brand-800\/40:hover {
+        background-color: rgba(203, 213, 225, 0.7) !important;
+      }
+
+      /* Logout button - light mode - IMPORTANT */
+      .light-mode button.hover\:text-neon-pink:hover,
+      .light-mode .hover\:text-neon-pink:hover {
+        color: #dc2626 !important;
+      }
+
+      .light-mode .hover\:bg-neon-pink\/10:hover {
+        background-color: rgba(220, 38, 38, 0.12) !important;
+      }
+
+      .light-mode .hover\:border-neon-pink\/30:hover {
+        border-color: rgba(220, 38, 38, 0.35) !important;
+      }
+
+      /* Amélioration des icônes et éléments du sidebar en light mode */
+      .light-mode .text-slate-400 {
+        color: #475569 !important;
+      }
+
+      /* Border colors for dividers - light mode */
+      .light-mode .border-accent\/5 {
+        border-color: rgba(59, 130, 246, 0.15) !important;
+      }
+
+      .light-mode .hover\:border-accent\/20:hover {
+        border-color: rgba(59, 130, 246, 0.3) !important;
+      }
+
+      /* Neon backgrounds for icons in light mode */
+      .light-mode .bg-neon-pink\/10 {
+        background-color: rgba(220, 38, 38, 0.12) !important;
+      }
+
+      .light-mode .border-neon-purple\/10,
+      .light-mode .border-neon-green\/10,
+      .light-mode .border-neon-pink\/10 {
+        border-color: rgba(99, 102, 241, 0.2) !important;
+      }
+
+      /* Amélioration du loading skeleton en light mode */
+      .light-mode .animate-pulse {
+        background-color: rgba(203, 213, 225, 0.5) !important;
+      }
+
+      /* Amélioration du hover sur les items de navigation en light mode */
+      .light-mode .hover\:bg-glass-light:hover {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+      }
+
+      /* Amélioration de la visibilité des badges status en light mode */
+      .light-mode .bg-slate-700\/50 {
+        background-color: rgba(71, 85, 105, 0.2) !important;
+      }
+
+      .light-mode .border-slate-600 {
+        border-color: rgba(71, 85, 105, 0.4) !important;
+      }
+
+      /* Fix pour le texte dans les boutons qui gardent text-white */
+      .light-mode .bg-accent.text-white,
+      .light-mode .bg-neon-green.text-white,
+      .light-mode .bg-neon-green.text-brand-950 {
+        color: #ffffff !important;
+      }
+
+      .light-mode .bg-neon-green.text-brand-950 {
+        color: #0f172a !important;
+      }
+
+      /* ========================================
+         LOGOUT BUTTON - DEDICATED STYLES
+      ======================================== */
+      /* Dark mode - logout button */
+      .logout-btn {
+        color: #ef4444 !important;
+        border-color: rgba(239, 68, 68, 0.4) !important;
+        background-color: rgba(239, 68, 68, 0.1) !important;
+      }
+
+      .logout-btn:hover {
+        color: #ffffff !important;
+        background-color: #dc2626 !important;
+        border-color: #dc2626 !important;
+      }
+
+      /* Light mode - logout button - VISIBLE BUT IN THEME */
+      .light-mode .logout-btn {
+        color: #b91c1c !important;
+        border-color: #b91c1c !important;
+        background-color: rgba(185, 28, 28, 0.12) !important;
+      }
+
+      .light-mode .logout-btn:hover {
+        color: #ffffff !important;
+        background-color: #dc2626 !important;
+        border-color: #dc2626 !important;
+      }
+
+      /* ========================================
+         TABLE FILTERS - CATALOG PAGE LIGHT MODE
+      ======================================== */
+      /* Filter row background */
+      .light-mode .bg-brand-900\/40 {
+        background-color: rgba(241, 245, 249, 0.95) !important;
+      }
+
+      .light-mode .bg-brand-900\/50 {
+        background-color: rgba(226, 232, 240, 0.95) !important;
+      }
+
+      /* Filter inputs inside table */
+      .light-mode thead input,
+      .light-mode thead select {
+        background-color: #ffffff !important;
+        border-color: rgba(59, 130, 246, 0.35) !important;
+        color: #0f172a !important;
+      }
+
+      .light-mode thead input::placeholder {
+        color: #94a3b8 !important;
+      }
+
+      .light-mode thead input:focus,
+      .light-mode thead select:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+      }
+
+      /* ========================================
+         UNIFIED TABLE STYLES - LIGHT MODE
+      ======================================== */
+      /* Table header - light mode */
+      .light-mode .card-futuristic thead {
+        background: rgba(241, 245, 249, 0.95) !important;
+      }
+
+      .light-mode .card-futuristic thead th,
+      .light-mode thead th {
+        color: #334155 !important;
+        border-bottom-color: rgba(59, 130, 246, 0.2) !important;
+      }
+
+      .light-mode thead .text-slate-400 {
+        color: #475569 !important;
+      }
+
+      /* Filter inputs in header - light mode */
+      .light-mode .card-futuristic thead input,
+      .light-mode .card-futuristic thead select {
+        background-color: #ffffff !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        color: #0f172a !important;
+      }
+
+      .light-mode .card-futuristic thead input::placeholder {
+        color: #94a3b8 !important;
+      }
+
+      .light-mode .card-futuristic thead input:focus,
+      .light-mode .card-futuristic thead select:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+      }
+
+      /* Table body - light mode */
+      .light-mode .card-futuristic tbody td,
+      .light-mode tbody td {
+        color: #1e293b !important;
+        border-bottom-color: rgba(59, 130, 246, 0.1) !important;
+      }
+
+      .light-mode tbody .text-slate-300,
+      .light-mode tbody .text-slate-400,
+      .light-mode .card-futuristic tbody .text-slate-300,
+      .light-mode .card-futuristic tbody .text-slate-400 {
+        color: #475569 !important;
+      }
+
+      .light-mode .card-futuristic tbody .text-slate-100,
+      .light-mode tbody .text-slate-100 {
+        color: #1e293b !important;
+      }
+
+      /* Table row hover - light mode */
+      .light-mode .card-futuristic tbody tr:hover,
+      .light-mode tbody tr:hover {
+        background-color: rgba(59, 130, 246, 0.08) !important;
+      }
+
+      /* Pagination bar - light mode */
+      .light-mode .card-futuristic .bg-brand-900\/40,
+      .light-mode .card-futuristic .bg-brand-900\/50 {
+        background-color: rgba(241, 245, 249, 0.95) !important;
+        border-color: rgba(59, 130, 246, 0.15) !important;
+      }
+
+      /* Table dividers - light mode */
+      .light-mode .card-futuristic .divide-y > :not([hidden]) ~ :not([hidden]),
+      .light-mode .card-futuristic .divide-accent\/10 > :not([hidden]) ~ :not([hidden]) {
+        border-color: rgba(59, 130, 246, 0.12) !important;
+      }
+
+      /* Table badges in light mode */
+      .light-mode .card-futuristic tbody .font-mono,
+      .light-mode tbody .font-mono {
+        background-color: rgba(226, 232, 240, 0.9) !important;
+        color: #334155 !important;
+      }
+
+      /* Pagination bar */
+      .light-mode .bg-brand-900\/40.border-t {
+        background-color: rgba(241, 245, 249, 0.95) !important;
+        border-top-color: rgba(59, 130, 246, 0.2) !important;
+      }
+
+      /* Select dropdown inside table */
+      .light-mode thead select option {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+      }
+
+      .light-mode thead select option:checked,
+      .light-mode thead select option:hover {
+        background-color: #e2e8f0 !important;
+      }
+
+      /* ========================================
+         MODALES & POPUPS - LIGHT MODE (OPAQUE)
+      ======================================== */
+      /* Modal/Popup container - solid background, no transparency */
+      .light-mode .fixed.inset-0 .card-futuristic,
+      .light-mode .fixed.inset-0 .glass,
+      .light-mode .fixed.inset-0 .glass-light,
+      .light-mode [class*="z-[100]"] .card-futuristic,
+      .light-mode [class*="z-[100]"] .glass,
+      .light-mode [class*="z-50"] .card-futuristic,
+      .light-mode [class*="z-50"] .glass {
+        background: #ffffff !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-color: rgba(59, 130, 246, 0.25) !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 30px rgba(59, 130, 246, 0.1) !important;
+      }
+
+      /* Modal backdrop - keep semi-transparent for overlay effect */
+      .light-mode .fixed.inset-0.bg-black\/60,
+      .light-mode .fixed.inset-0.bg-black\/70,
+      .light-mode .fixed.inset-0[class*="bg-black"] {
+        background-color: rgba(15, 23, 42, 0.6) !important;
+      }
+
+      /* Modal inner elements - ensure solid backgrounds */
+      .light-mode .fixed.inset-0 .bg-brand-800\/50,
+      .light-mode .fixed.inset-0 .bg-brand-800\/60,
+      .light-mode .fixed.inset-0 .bg-brand-900\/50 {
+        background-color: rgba(226, 232, 240, 0.95) !important;
+      }
+
+      /* Modal buttons glass-light - solid in light mode */
+      .light-mode .fixed.inset-0 button.glass-light,
+      .light-mode [class*="z-[100]"] button.glass-light {
+        background: #f1f5f9 !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+      }
+
+      .light-mode .fixed.inset-0 button.glass-light:hover,
+      .light-mode [class*="z-[100]"] button.glass-light:hover {
+        background: #e2e8f0 !important;
+        border-color: rgba(59, 130, 246, 0.5) !important;
+      }
+
+      /* Modal text colors */
+      .light-mode .fixed.inset-0 .text-white,
+      .light-mode [class*="z-[100]"] .text-white {
+        color: #0f172a !important;
+      }
+
+      .light-mode .fixed.inset-0 .text-slate-200,
+      .light-mode [class*="z-[100]"] .text-slate-200 {
+        color: #334155 !important;
+      }
+
+      .light-mode .fixed.inset-0 .text-slate-400,
+      .light-mode [class*="z-[100]"] .text-slate-400 {
+        color: #64748b !important;
+      }
+
+      /* Keep modal action buttons with correct text color */
+      .light-mode .fixed.inset-0 button.bg-accent,
+      .light-mode .fixed.inset-0 button.bg-neon-pink,
+      .light-mode .fixed.inset-0 button.bg-neon-green,
+      .light-mode [class*="z-[100]"] button.bg-accent,
+      .light-mode [class*="z-[100]"] button.bg-neon-pink {
+        color: #ffffff !important;
+      }
+
+      /* Modal input fields */
+      .light-mode .fixed.inset-0 input,
+      .light-mode .fixed.inset-0 select,
+      .light-mode .fixed.inset-0 textarea,
+      .light-mode [class*="z-[100]"] input,
+      .light-mode [class*="z-[100]"] select,
+      .light-mode [class*="z-[100]"] textarea {
+        background-color: #f8fafc !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        color: #0f172a !important;
+      }
+
+      .light-mode .fixed.inset-0 input:focus,
+      .light-mode .fixed.inset-0 select:focus,
+      .light-mode .fixed.inset-0 textarea:focus,
+      .light-mode [class*="z-[100]"] input:focus,
+      .light-mode [class*="z-[100]"] select:focus,
+      .light-mode [class*="z-[100]"] textarea:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+      }
+
+      /* ========================================
+         DROPDOWNS / SEARCH RESULTS - LIGHT MODE (OPAQUE)
+      ======================================== */
+      /* Search dropdown results - solid white background */
+      .light-mode .absolute.card-futuristic,
+      .light-mode .relative .card-futuristic.absolute,
+      .light-mode [class*="z-50"].card-futuristic,
+      .light-mode .card-futuristic.max-h-80,
+      .light-mode .card-futuristic[class*="overflow-auto"] {
+        background: #ffffff !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.25), 0 0 20px rgba(59, 130, 246, 0.1) !important;
+      }
+
+      /* Dropdown items text */
+      .light-mode .absolute.card-futuristic .text-white,
+      .light-mode .card-futuristic.max-h-80 .text-white {
+        color: #0f172a !important;
+      }
+
+      .light-mode .absolute.card-futuristic .text-slate-400,
+      .light-mode .card-futuristic.max-h-80 .text-slate-400 {
+        color: #64748b !important;
+      }
+
+      .light-mode .absolute.card-futuristic .text-slate-500,
+      .light-mode .card-futuristic.max-h-80 .text-slate-500 {
+        color: #94a3b8 !important;
+      }
+
+      /* Dropdown item hover - highlighted */
+      .light-mode .absolute.card-futuristic .bg-accent\/20,
+      .light-mode .card-futuristic.max-h-80 .bg-accent\/20 {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+      }
+
+      .light-mode .absolute.card-futuristic .hover\:bg-brand-800\/60:hover,
+      .light-mode .card-futuristic.max-h-80 .hover\:bg-brand-800\/60:hover {
+        background-color: rgba(226, 232, 240, 0.8) !important;
+      }
+
+      /* Dropdown item border */
+      .light-mode .absolute.card-futuristic .border-accent\/10,
+      .light-mode .card-futuristic.max-h-80 .border-accent\/10 {
+        border-color: rgba(59, 130, 246, 0.15) !important;
+      }
+
+      /* OEM badge in dropdown */
+      .light-mode .absolute.card-futuristic .bg-accent\/10,
+      .light-mode .card-futuristic.max-h-80 .bg-accent\/10 {
+        background-color: rgba(59, 130, 246, 0.12) !important;
+      }
+
+      /* Brand badge in dropdown */
+      .light-mode .absolute.card-futuristic .bg-brand-800\/60,
+      .light-mode .card-futuristic.max-h-80 .bg-brand-800\/60 {
+        background-color: rgba(226, 232, 240, 0.95) !important;
+        color: #334155 !important;
+      }
+
+      /* Price badges in dropdown */
+      .light-mode .absolute.card-futuristic .bg-neon-green\/10,
+      .light-mode .card-futuristic.max-h-80 .bg-neon-green\/10 {
+        background-color: rgba(34, 197, 94, 0.12) !important;
+      }
+
+      /* Availability badges in dropdown */
+      .light-mode .absolute.card-futuristic .bg-neon-green\/20,
+      .light-mode .card-futuristic.max-h-80 .bg-neon-green\/20 {
+        background-color: rgba(34, 197, 94, 0.15) !important;
+      }
+
+      .light-mode .absolute.card-futuristic .bg-neon-pink\/20,
+      .light-mode .card-futuristic.max-h-80 .bg-neon-pink\/20 {
+        background-color: rgba(239, 68, 68, 0.15) !important;
+      }
+
+      /* Selected product info bar */
+      .light-mode .bg-accent\/10.border-accent\/30 {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        border-color: rgba(59, 130, 246, 0.35) !important;
+      }
+
+      .light-mode .bg-accent\/10.border-accent\/30 .text-white {
+        color: #0f172a !important;
+      }
+
+      .light-mode .bg-accent\/10.border-accent\/30 .text-slate-300 {
+        color: #475569 !important;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
+    "@tanstack/react-query": "https://aistudiocdn.com/@tanstack/react-query@^5.90.12",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-brand-950 text-slate-100 antialiased selection:bg-accent-light selection:text-white">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
