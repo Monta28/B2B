@@ -33,6 +33,7 @@ function transformOrder(order: Order) {
 
   return {
     id: order.id,
+    orderNumber: order.orderNumber || null,
     orderType: order.orderType,
     dmsRef: order.dmsRef || null,
     isEditing,
@@ -43,12 +44,17 @@ function transformOrder(order: Order) {
     } : null,
     editingStartedAt: isEditing ? order.editingStartedAt?.toISOString() : null,
     date: order.createdAt?.toISOString().split('T')[0] || '',
+    createdAt: order.createdAt?.toISOString() || '',
     lastModifiedAt: order.lastModifiedAt?.toISOString() || order.createdAt?.toISOString() || '',
     status: order.status,
     totalAmount: Number(order.totalHt) || 0,
     itemCount: order.items?.length || 0,
     companyName: order.company?.name || '',
     userEmail: order.createdByUser?.email || '',
+    createdByUser: order.createdByUser ? {
+      id: order.createdByUser.id,
+      fullName: order.createdByUser.fullName,
+    } : null,
     vehicleInfo: order.vehicleInfo || null,
     clientNotes: order.clientNotes || null,
     internalNotes: order.internalNotes || null,
