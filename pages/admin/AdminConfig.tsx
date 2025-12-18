@@ -53,7 +53,7 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
     price: 'Prix TTC',
     stock: 'Stock',
     minStock: 'Stock Minimum',
-    location: 'Emplacement',
+    location: 'Position (ID → table Positions)',
     codeOrigine: 'Code Origine',
     codeTva: 'Code TVA',
   },
