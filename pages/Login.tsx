@@ -4,14 +4,6 @@ import { useConfig } from '../context/ConfigContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
-// Données pour le remplissage rapide (Dev Mode)
-const QUICK_LOGINS = [
-  { label: 'Super Admin', email: 'sysadmin@mecacomm.com', password: 'sysadmin', role: 'Configuration & Gestion Totale', color: 'bg-neon-purple/20 text-neon-purple border-neon-purple/30 hover:bg-neon-purple/30', icon: '👑' },
-  { label: 'Admin Commandes', email: 'partial@mecacomm.com', password: 'partial', role: 'Validation Commandes Uniquement', color: 'bg-neon-blue/20 text-neon-blue border-neon-blue/30 hover:bg-neon-blue/30', icon: '📋' },
-  { label: 'Client Admin', email: 'admin@client.com', password: 'admin', role: 'Gestion Équipe & Achats', color: 'bg-accent/20 text-accent border-accent/30 hover:bg-accent/30', icon: '🏢' },
-  { label: 'Client User', email: 'user@client.com', password: 'user', role: 'Consultation Catalogue', color: 'bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700', icon: '👤' },
-];
-
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,11 +29,6 @@ export const Login = () => {
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
     }
-  };
-
-  const handleQuickLogin = (loginEmail: string, loginPassword: string) => {
-    setEmail(loginEmail);
-    setPassword(loginPassword);
   };
 
   return (
@@ -343,40 +330,6 @@ export const Login = () => {
               </span>
             </button>
           </form>
-
-          {/* Quick Access Section */}
-          <div className="mt-10">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-accent/20"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 bg-brand-950 text-xs font-bold text-accent uppercase tracking-wider flex items-center">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Accès Rapide
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              {QUICK_LOGINS.map((loginOption) => (
-                <button
-                  key={loginOption.email}
-                  onClick={() => handleQuickLogin(loginOption.email, loginOption.password)}
-                  className={`flex flex-col items-center p-4 rounded-xl border text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${loginOption.color}`}
-                >
-                  <span className="text-2xl mb-2">{loginOption.icon}</span>
-                  <p className="font-bold text-sm">{loginOption.label}</p>
-                  <p className="text-[10px] opacity-70 mt-1 line-clamp-1">{loginOption.role}</p>
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-4 text-center">
-              Mode développement - Cliquez pour pré-remplir
-            </p>
-          </div>
 
         </div>
       </div>
