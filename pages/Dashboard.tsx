@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { NewsType } from '../types';
+import { NewsType, OrderStatus } from '../types';
 import { useConfig } from '../context/ConfigContext';
 
 export const Dashboard = () => {
@@ -12,8 +12,48 @@ export const Dashboard = () => {
 
   const { data: newsItems, isLoading: newsLoading } = useQuery({
     queryKey: ['news', 'active'],
-    queryFn: () => api.getNews(true) 
+    queryFn: () => api.getNews(true)
   });
+
+  // Fetch orders for statistics
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: api.getOrders
+  });
+
+  // Fetch documents for statistics
+  const { data: documents = [], isLoading: documentsLoading } = useQuery({
+    queryKey: ['documents', user?.companyName],
+    queryFn: () => api.getDocuments(user?.companyName)
+  });
+
+  // Calculate order statistics
+  const orderStats = useMemo(() => {
+    const pending = orders.filter((o: any) => o.status === OrderStatus.PENDING).length;
+    const validated = orders.filter((o: any) => o.status === OrderStatus.VALIDATED).length;
+    const preparation = orders.filter((o: any) => o.status === OrderStatus.PREPARATION).length;
+    const shipped = orders.filter((o: any) => o.status === OrderStatus.SHIPPED).length;
+    const inProgress = pending + validated + preparation;
+    return { pending, validated, preparation, shipped, inProgress };
+  }, [orders]);
+
+  // Calculate document statistics (invoices this month)
+  const docStats = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const invoices = documents.filter((d: any) => d.type === 'INVOICE');
+    const invoicesThisMonth = invoices.filter((d: any) => {
+      const docDate = new Date(d.date);
+      return docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear;
+    });
+
+    const totalHT = invoicesThisMonth.reduce((sum: number, d: any) => sum + (d.totalHT || 0), 0);
+    const count = invoicesThisMonth.length;
+
+    return { totalHT, count, totalInvoices: invoices.length };
+  }, [documents]);
 
   const getNewsIcon = (type: NewsType) => {
     switch(type) {
@@ -47,30 +87,36 @@ export const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-        {/* Card 1 */}
+        {/* Card 1 - Commandes en cours */}
         <div className="card-futuristic p-7 rounded-2xl group">
           <div className="flex justify-between items-start">
             <div className="p-3.5 bg-accent/20 rounded-2xl text-accent group-hover:bg-accent group-hover:text-white transition-colors duration-300 shadow-glow">
               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
             </div>
-            <span className="flex h-3 w-3 relative">
-               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-               <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
-            </span>
+            {orderStats.inProgress > 0 && (
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+              </span>
+            )}
           </div>
           <div className="mt-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Commandes en cours</h3>
-            <p className="text-4xl font-extrabold text-white mt-2 tracking-tight">3</p>
+            <p className="text-4xl font-extrabold text-white mt-2 tracking-tight">
+              {ordersLoading ? '...' : orderStats.inProgress}
+            </p>
           </div>
           <div className="mt-6 pt-4 border-t border-accent/10 flex justify-between items-center">
-            <span className="text-xs font-medium text-slate-400 bg-accent/10 px-2 py-1 rounded">2 en livraison</span>
+            <span className="text-xs font-medium text-slate-400 bg-accent/10 px-2 py-1 rounded">
+              {orderStats.shipped > 0 ? `${orderStats.shipped} expédié${orderStats.shipped > 1 ? 's' : ''}` : 'Aucune expédiée'}
+            </span>
             <Link to="/orders" className="text-sm font-semibold text-accent hover:text-accent-hover flex items-center group-hover:translate-x-1 transition-transform">
               Voir détails <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </Link>
           </div>
         </div>
 
-        {/* Card 2 */}
+        {/* Card 2 - Factures du mois */}
         <div className="card-futuristic p-7 rounded-2xl group">
           <div className="flex justify-between items-start">
              <div className="p-3.5 bg-neon-purple/20 rounded-2xl text-neon-purple group-hover:bg-neon-purple group-hover:text-white transition-colors duration-300 shadow-glow-purple">
@@ -80,19 +126,21 @@ export const Dashboard = () => {
           <div className="mt-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Factures (Mois)</h3>
             <p className="text-4xl font-extrabold text-white mt-2 tracking-tight flex items-baseline">
-              {formatPrice(1240.500)}
+              {documentsLoading ? '...' : formatPrice(docStats.totalHT)}
               <span className="text-2xl text-slate-500 font-normal ml-1">{config.currencySymbol}</span>
             </p>
           </div>
           <div className="mt-6 pt-4 border-t border-neon-purple/10 flex justify-between items-center">
-             <span className="text-xs font-medium text-slate-400 bg-neon-purple/10 px-2 py-1 rounded">3 nouvelles</span>
+             <span className="text-xs font-medium text-slate-400 bg-neon-purple/10 px-2 py-1 rounded">
+               {docStats.count > 0 ? `${docStats.count} facture${docStats.count > 1 ? 's' : ''}` : 'Aucune ce mois'}
+             </span>
              <Link to="/documents" className="text-sm font-semibold text-neon-purple hover:text-neon-purple/80 flex items-center group-hover:translate-x-1 transition-transform">
                Accéder <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
              </Link>
           </div>
         </div>
 
-        {/* Card 3 */}
+        {/* Card 3 - Remise globale */}
         <div className="card-futuristic p-7 rounded-2xl group">
           <div className="flex justify-between items-start">
              <div className="p-3.5 bg-neon-green/20 rounded-2xl text-neon-green group-hover:bg-neon-green group-hover:text-white transition-colors duration-300">
@@ -101,11 +149,17 @@ export const Dashboard = () => {
           </div>
           <div className="mt-6">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Remise Globale</h3>
-            <p className="text-4xl font-extrabold text-neon-green mt-2 tracking-tight">-35%</p>
+            <p className="text-4xl font-extrabold text-neon-green mt-2 tracking-tight">
+              {user?.globalDiscount ? `-${user.globalDiscount}%` : '0%'}
+            </p>
           </div>
           <div className="mt-6 pt-4 border-t border-neon-green/10 flex justify-between items-center">
-            <span className="text-xs text-slate-400">Famille FREINAGE</span>
-            <span className="text-xs font-bold bg-neon-green/20 text-neon-green px-2 py-1 rounded border border-neon-green/30">ACTIVE</span>
+            <span className="text-xs text-slate-400">Votre remise appliquée</span>
+            {user?.globalDiscount && user.globalDiscount > 0 ? (
+              <span className="text-xs font-bold bg-neon-green/20 text-neon-green px-2 py-1 rounded border border-neon-green/30">ACTIVE</span>
+            ) : (
+              <span className="text-xs font-bold bg-slate-700/50 text-slate-400 px-2 py-1 rounded border border-slate-600">AUCUNE</span>
+            )}
           </div>
         </div>
       </div>
