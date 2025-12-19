@@ -25,6 +25,9 @@ export const AdminUsers = () => {
   const [toggleConfirmId, setToggleConfirmId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [resetPwdId, setResetPwdId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   // Column filtering state
   const [filters, setFilters] = useState({
@@ -81,8 +84,15 @@ export const AdminUsers = () => {
   });
 
   const resetPwdMutation = useMutation({
-    mutationFn: (userId: string) => api.admin.resetUserPassword(userId, 'password123'),
-    onSuccess: () => toast.success("Mot de passe réinitialisé (Valeur temporaire: 'password123')")
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      api.admin.resetUserPassword(userId, password),
+    onSuccess: () => {
+      toast.success("Mot de passe réinitialisé avec succès");
+      setResetPwdId(null);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError('');
+    }
   });
 
   // Helper to get company name from user
@@ -494,14 +504,84 @@ export const AdminUsers = () => {
         confirmLabel="Supprimer"
       />
 
-      <ConfirmModal
-        isOpen={!!resetPwdId}
-        onClose={() => setResetPwdId(null)}
-        onConfirm={() => resetPwdId && resetPwdMutation.mutate(resetPwdId)}
-        title="Réinitialiser le mot de passe ?"
-        message="Le mot de passe sera remplacé par une valeur temporaire que vous devrez communiquer à l'utilisateur."
-        confirmLabel="Réinitialiser"
-      />
+      {/* Password Reset Modal */}
+      {resetPwdId && createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+          <div className="card-futuristic rounded-2xl p-6 max-w-md w-full shadow-card border border-accent/20">
+            <h2 className="text-xl font-bold text-white mb-4">Réinitialiser le mot de passe</h2>
+            <p className="text-slate-400 text-sm mb-4">Entrez le nouveau mot de passe pour cet utilisateur.</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Nouveau mot de passe *</label>
+                <input
+                  type="password"
+                  className="w-full border border-accent/20 bg-brand-800/60 text-white rounded-md p-2 focus:ring-accent/30 focus:border-accent"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="Minimum 4 caractères"
+                  minLength={4}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Confirmer le mot de passe *</label>
+                <input
+                  type="password"
+                  className="w-full border border-accent/20 bg-brand-800/60 text-white rounded-md p-2 focus:ring-accent/30 focus:border-accent"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="Retapez le mot de passe"
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-red-400 text-sm">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetPwdId(null);
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setPasswordError('');
+                }}
+                className="px-4 py-2 rounded-lg bg-brand-800 text-slate-300 hover:bg-brand-700 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={resetPwdMutation.isPending}
+                onClick={() => {
+                  if (newPassword.length < 4) {
+                    setPasswordError('Le mot de passe doit contenir au moins 4 caractères');
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    setPasswordError('Les mots de passe ne correspondent pas');
+                    return;
+                  }
+                  resetPwdMutation.mutate({ userId: resetPwdId, password: newPassword });
+                }}
+                className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium transition-colors disabled:opacity-50"
+              >
+                {resetPwdMutation.isPending ? 'En cours...' : 'Réinitialiser'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {isModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
