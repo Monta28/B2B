@@ -415,6 +415,7 @@ export const AdminConfig = () => {
   const [customCity, setCustomCity] = useState('');
 
   // Company Details for Documents
+  const [companyLegalName, setCompanyLegalName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
   const [companyPostalCode, setCompanyPostalCode] = useState('');
   const [companyCity, setCompanyCity] = useState('');
@@ -610,6 +611,7 @@ export const AdminConfig = () => {
     }
 
     // Company details
+    setCompanyLegalName(appConfig.companyLegalName || '');
     setCompanyAddress(appConfig.companyAddress || '');
     setCompanyPostalCode(appConfig.companyPostalCode || '');
     setCompanyCity(appConfig.companyCity || '');
@@ -672,6 +674,7 @@ export const AdminConfig = () => {
         brandLogos: logos,
         weatherLocation: finalLocation,
         // Company details for documents
+        companyLegalName: companyLegalName || undefined,
         companyAddress: companyAddress || undefined,
         companyPostalCode: companyPostalCode || undefined,
         companyCity: companyCity || undefined,
@@ -1032,6 +1035,20 @@ export const AdminConfig = () => {
                 value={documentLogoUrl || ''}
                 onChange={e => setDocumentLogoUrl(e.target.value || undefined)}
                 placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          {/* Raison Sociale */}
+          <div className="grid grid-cols-1 gap-3 mb-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-300">Raison Sociale</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                value={companyLegalName}
+                onChange={e => setCompanyLegalName(e.target.value)}
+                placeholder="Ex: SOCIÉTÉ XYZ SARL"
               />
             </div>
           </div>

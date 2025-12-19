@@ -205,6 +205,7 @@ export interface AppConfig {
    borderRadiusStyle?: string;
 
   // Company details for documents (invoices, BL, etc.)
+  companyLegalName?: string; // Raison sociale
   companyAddress?: string;
   companyPostalCode?: string;
   companyCity?: string;

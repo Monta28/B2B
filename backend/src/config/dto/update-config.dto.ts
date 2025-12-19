@@ -138,6 +138,10 @@ export class UpdateAppConfigDto {
   // Company details for documents
   @IsOptional()
   @IsString()
+  companyLegalName?: string; // Raison sociale
+
+  @IsOptional()
+  @IsString()
   companyAddress?: string;
 
   @IsOptional()

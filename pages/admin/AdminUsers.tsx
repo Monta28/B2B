@@ -559,7 +559,7 @@ export const AdminUsers = () => {
                     readOnly
                     disabled
                     className="mt-1 w-full border border-accent/10 bg-brand-800/40 rounded-md p-2 text-slate-500 cursor-not-allowed"
-                    value="MECACOMM HQ (Interne)"
+                    value="SoftNex"
                   />
                 ) : (
                   <select

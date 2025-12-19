@@ -104,6 +104,9 @@ export class AppConfig {
   catalogLoadMode: string;
 
   // Company details for documents (invoices, BL, etc.)
+  @Column({ name: 'company_legal_name', length: 255, nullable: true })
+  companyLegalName: string; // Raison sociale
+
   @Column({ name: 'company_address', length: 255, nullable: true })
   companyAddress: string;
 
