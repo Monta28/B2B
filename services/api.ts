@@ -473,7 +473,7 @@ export const api = {
         user: config.sqlServerUser || '',
         hasPassword: !!config.sqlServerPassword,
         encrypted: true,
-        syncInterval: 5,
+        syncInterval: config.dmsSyncInterval ?? 5, // Load from backend
         catalogLoadMode: config.catalogLoadMode || 'auto',
       };
     },
