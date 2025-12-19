@@ -1011,38 +1011,22 @@ export const Clients = () => {
                 </div>
               ) : (
                 <>
-                  {/* Pagination info */}
-                  <div className="px-4 py-3 bg-brand-900/40 border-b border-accent/10 flex justify-between items-center flex-shrink-0">
-                    <span className="text-sm text-slate-300">
-                      Affichage de <span className="font-semibold">{displayedDmsClients.length}</span> sur <span className="font-semibold">{filteredDmsClients.length}</span> clients
-                      {filteredDmsClients.length !== dmsClients.length && (
-                        <span className="text-slate-500"> (filtré de {dmsClients.length} total)</span>
-                      )}
-                    </span>
-                    {hasActiveImportFilters && (
-                      <button
-                        onClick={() => setImportFilters({ codeClient: '', raisonSociale: '', codeTva: '', telephone: '', email: '', tauxRemise: '' })}
-                        className="text-sm text-accent hover:text-accent-hover flex items-center"
-                      >
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Réinitialiser les filtres
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Scrollable table container */}
-                  <div
-                    ref={importTableContainerRef}
-                    onScroll={handleImportScroll}
-                    className="overflow-auto flex-1"
-                    style={{ maxHeight: '400px' }}
-                  >
+                  {/* Fixed header with filters */}
+                  <div className="flex-shrink-0 overflow-x-auto">
                     <table className="w-full text-left text-sm table-fixed" style={{ minWidth: '900px' }}>
-                      <thead className="bg-brand-900/60 border-b border-accent/10 sticky top-0 z-10">
+                      <colgroup>
+                        <col style={{ width: '40px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '200px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '160px' }} />
+                        <col style={{ width: '100px' }} />
+                      </colgroup>
+                      <thead className="bg-brand-900/50 border-b border-accent/10">
+                        {/* Header row */}
                         <tr>
-                          <th className="px-3 py-3" style={{ width: '40px' }}>
+                          <th className="px-3 py-3">
                             <input
                               type="checkbox"
                               checked={selectedClients.size === filteredDmsClients.length && filteredDmsClients.length > 0}
@@ -1050,80 +1034,92 @@ export const Clients = () => {
                               className="h-4 w-4 text-accent bg-brand-800/60 rounded border-accent/30 focus:ring-accent/40"
                             />
                           </th>
-                          <th className="px-3 py-3" style={{ width: '120px', minWidth: '120px' }}>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Code Client</span>
-                              <input
-                                type="text"
-                                placeholder="Filtrer..."
-                                value={importFilters.codeClient}
-                                onChange={e => setImportFilters(f => ({ ...f, codeClient: e.target.value }))}
-                                className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                              />
-                            </div>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Code Client</th>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Raison Sociale</th>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Code TVA</th>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Téléphone</th>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Remise</th>
+                        </tr>
+                        {/* Filter row */}
+                        <tr className="bg-brand-900/40">
+                          <th className="px-3 py-2"></th>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="Filtrer..."
+                              value={importFilters.codeClient}
+                              onChange={e => setImportFilters(f => ({ ...f, codeClient: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
                           </th>
-                          <th className="px-3 py-3" style={{ width: '200px', minWidth: '200px' }}>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Raison Sociale</span>
-                              <input
-                                type="text"
-                                placeholder="Filtrer..."
-                                value={importFilters.raisonSociale}
-                                onChange={e => setImportFilters(f => ({ ...f, raisonSociale: e.target.value }))}
-                                className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                              />
-                            </div>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="Filtrer..."
+                              value={importFilters.raisonSociale}
+                              onChange={e => setImportFilters(f => ({ ...f, raisonSociale: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
                           </th>
-                          <th className="px-3 py-3" style={{ width: '120px', minWidth: '120px' }}>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Code TVA</span>
-                              <input
-                                type="text"
-                                placeholder="Filtrer..."
-                                value={importFilters.codeTva}
-                                onChange={e => setImportFilters(f => ({ ...f, codeTva: e.target.value }))}
-                                className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                              />
-                            </div>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="Filtrer..."
+                              value={importFilters.codeTva}
+                              onChange={e => setImportFilters(f => ({ ...f, codeTva: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
                           </th>
-                          <th className="px-3 py-3" style={{ width: '120px', minWidth: '120px' }}>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Téléphone</span>
-                              <input
-                                type="text"
-                                placeholder="Filtrer..."
-                                value={importFilters.telephone}
-                                onChange={e => setImportFilters(f => ({ ...f, telephone: e.target.value }))}
-                                className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                              />
-                            </div>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="Filtrer..."
+                              value={importFilters.telephone}
+                              onChange={e => setImportFilters(f => ({ ...f, telephone: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
                           </th>
-                          <th className="px-3 py-3" style={{ width: '160px', minWidth: '160px' }}>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Email</span>
-                              <input
-                                type="text"
-                                placeholder="Filtrer..."
-                                value={importFilters.email}
-                                onChange={e => setImportFilters(f => ({ ...f, email: e.target.value }))}
-                                className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                              />
-                            </div>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="Filtrer..."
+                              value={importFilters.email}
+                              onChange={e => setImportFilters(f => ({ ...f, email: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
                           </th>
-                          <th className="px-3 py-3" style={{ width: '100px', minWidth: '100px' }}>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Remise</span>
-                              <input
-                                type="text"
-                                placeholder="%"
-                                value={importFilters.tauxRemise}
-                                onChange={e => setImportFilters(f => ({ ...f, tauxRemise: e.target.value }))}
-                                className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                              />
-                            </div>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="%"
+                              value={importFilters.tauxRemise}
+                              onChange={e => setImportFilters(f => ({ ...f, tauxRemise: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
                           </th>
                         </tr>
                       </thead>
+                    </table>
+                  </div>
+
+                  {/* Scrollable table body */}
+                  <div
+                    ref={importTableContainerRef}
+                    onScroll={handleImportScroll}
+                    className="overflow-y-auto flex-1 overflow-x-auto"
+                    style={{ maxHeight: '350px' }}
+                  >
+                    <table className="w-full text-left text-sm table-fixed" style={{ minWidth: '900px' }}>
+                      <colgroup>
+                        <col style={{ width: '40px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '200px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '160px' }} />
+                        <col style={{ width: '100px' }} />
+                      </colgroup>
                       <tbody className="divide-y divide-accent/10">
                         {filteredDmsClients.length === 0 ? (
                           <tr>
@@ -1204,16 +1200,37 @@ export const Clients = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Pagination info bar - bottom */}
+                  <div className="px-4 py-2 bg-brand-900/40 border-t border-accent/10 text-xs text-slate-400 flex-shrink-0 flex justify-between items-center">
+                    <span>
+                      Affichage de {displayedDmsClients.length} clients sur {filteredDmsClients.length}
+                      {filteredDmsClients.length !== dmsClients.length && (
+                        <span className="text-slate-500"> (filtré de {dmsClients.length} total)</span>
+                      )}
+                    </span>
+                    {hasActiveImportFilters && (
+                      <button
+                        onClick={() => setImportFilters({ codeClient: '', raisonSociale: '', codeTva: '', telephone: '', email: '', tauxRemise: '' })}
+                        className="text-xs text-neon-pink hover:text-neon-pink/80 flex items-center gap-1"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Effacer filtres
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
 
-            {/* Footer */}
+            {/* Footer with action buttons */}
             {!isLoadingDms && !dmsError && !importResult && dmsClients.length > 0 && (
-              <div className="p-6 border-t border-accent/10 bg-brand-900/40">
+              <div className="p-4 border-t border-accent/10 bg-brand-900/30 flex-shrink-0">
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-slate-300">
-                    <span className="font-semibold">{selectedClients.size}</span> client(s) sélectionné(s) sur <span className="font-semibold">{filteredDmsClients.length}</span>
+                    <span className="font-semibold text-accent">{selectedClients.size}</span> client(s) sélectionné(s)
                   </div>
                   <div className="flex space-x-3">
                     <button
