@@ -343,6 +343,7 @@ export const api = {
   // Config
   getAppConfig: async () => {
     const config = await fetchApi<any>('/config/app');
+    console.log('[API] getAppConfig - dmsSyncInterval from backend:', config.dmsSyncInterval);
     return {
       currencySymbol: config.currencySymbol ?? 'TND',
       decimalPlaces: config.decimalPlaces ?? 3,
@@ -353,6 +354,7 @@ export const api = {
         : 'Tunis',
       fontFamily: config.fontFamily || 'Inter, "Segoe UI", sans-serif',
       borderRadiusStyle: config.borderRadiusStyle || '12px',
+      dmsSyncInterval: config.dmsSyncInterval ?? 5, // Explicitly include for auto sync
       ...config,
     };
   },
