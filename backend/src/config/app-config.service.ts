@@ -91,6 +91,7 @@ export class AppConfigService {
         weatherCity: 'Tunis',
         weatherCountry: 'TN',
         sqlServerPort: 1433,
+        dmsSyncInterval: 5, // Default: 5 minutes
       });
       await this.appConfigRepository.save(config);
     }

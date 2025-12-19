@@ -184,6 +184,7 @@ export interface AppConfig {
   brandLogos: string[]; // List of base64 or URL images for header marquee
   weatherLocation?: string; // City for weather widget
   catalogLoadMode?: 'auto' | 'search'; // 'auto' = load on page load, 'search' = require search
+  dmsSyncInterval?: number; // DMS sync interval in minutes (0 = disabled)
 
   // Branding / Theme (optional)
   companyName?: string;

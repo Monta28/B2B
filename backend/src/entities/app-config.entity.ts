@@ -95,6 +95,10 @@ export class AppConfig {
   @Column({ name: 'sql_server_database', length: 255, nullable: true })
   sqlServerDatabase: string;
 
+  // DMS Sync interval in minutes (0 = disabled)
+  @Column({ name: 'dms_sync_interval', default: 5 })
+  dmsSyncInterval: number;
+
   // Catalog behavior: 'auto' = load products on page load, 'search' = require search
   @Column({ name: 'catalog_load_mode', length: 20, default: 'auto' })
   catalogLoadMode: string;

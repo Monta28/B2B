@@ -485,6 +485,7 @@ export const api = {
         sqlServerDatabase: data.database,
         sqlServerUser: data.user,
         catalogLoadMode: data.catalogLoadMode,
+        dmsSyncInterval: data.syncInterval || 5, // DMS sync interval in minutes
       };
       // Only send password if it's provided (not empty)
       if (data.password) {

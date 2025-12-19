@@ -126,6 +126,12 @@ export class UpdateAppConfigDto {
   sqlServerDatabase?: string;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1440) // Max 24 hours
+  dmsSyncInterval?: number; // DMS sync interval in minutes (0 = disabled)
+
+  @IsOptional()
   @IsString()
   catalogLoadMode?: string; // 'auto' or 'search'
 

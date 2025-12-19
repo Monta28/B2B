@@ -93,6 +93,29 @@ export const Orders = () => {
   const syncDmsMutation = useMutation({ mutationFn: () => api.admin.syncDmsOrders(), onSuccess: (result: { synced: number; message: string }) => { queryClient.invalidateQueries({ queryKey: ['orders'] }); if (result.synced > 0) { toast.success(result.message); } else { toast(result.message, { icon: 'ℹ️' }); } }, onError: (error: any) => { toast.error(error.message || 'Erreur lors de la synchronisation'); } });
   const handlePrintPreparation = async (orderId: string) => { try { await api.printPreparationSlip(orderId); alert("Le bon de préparation a été envoyé à l'imprimante."); } catch (e) { alert("Erreur lors de l'impression."); } };
 
+  // Synchronisation automatique DMS basée sur l'intervalle configuré
+  useEffect(() => {
+    if (!isInternal) return; // Seulement pour les admins
+    const intervalMinutes = config.dmsSyncInterval || 0;
+    if (intervalMinutes <= 0) return; // Sync désactivée si 0 ou négatif
+
+    const intervalMs = intervalMinutes * 60 * 1000;
+    console.log(`[Orders] Auto DMS sync enabled: every ${intervalMinutes} minute(s)`);
+
+    // Sync au montage si l'intervalle est configuré
+    syncDmsMutation.mutate();
+
+    const intervalId = setInterval(() => {
+      console.log('[Orders] Running automatic DMS sync...');
+      syncDmsMutation.mutate();
+    }, intervalMs);
+
+    return () => {
+      console.log('[Orders] Cleaning up DMS sync interval');
+      clearInterval(intervalId);
+    };
+  }, [isInternal, config.dmsSyncInterval]);
+
   const filteredAndSortedOrders = useMemo(() => {
     if (!orders) return [];
     let result = [...orders];
