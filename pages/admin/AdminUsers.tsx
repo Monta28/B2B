@@ -6,6 +6,7 @@ import { api } from '../../services/api';
 import { User, UserRole } from '../../types';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useAuth } from '../../context/AuthContext';
+import { useConfig } from '../../context/ConfigContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -14,6 +15,7 @@ type SortConfig = { key: keyof User | 'companyName'; direction: 'asc' | 'desc'; 
 export const AdminUsers = () => {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const { config } = useConfig();
   const isFullAdmin = currentUser?.role === UserRole.FULL_ADMIN;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -559,7 +561,7 @@ export const AdminUsers = () => {
                     readOnly
                     disabled
                     className="mt-1 w-full border border-accent/10 bg-brand-800/40 rounded-md p-2 text-slate-500 cursor-not-allowed"
-                    value="SoftNex"
+                    value={config.companyLegalName || 'SoftNex'}
                   />
                 ) : (
                   <select
