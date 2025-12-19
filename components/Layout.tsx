@@ -83,7 +83,9 @@ export const Layout = () => {
               Connecté en tant que
             </p>
             <p className="font-semibold text-white truncate text-sm tracking-wide">{user?.fullName}</p>
-            <p className="text-xs text-slate-400 mt-0.5 truncate">B2B de {config.companyLegalName || 'SoftNex'}</p>
+            <p className="text-[11px] text-accent font-semibold mt-2 bg-accent/10 inline-block px-2 py-1 rounded-lg border border-accent/20 truncate max-w-full">
+              B2B de {config.companyLegalName || 'SoftNex'}
+            </p>
           </div>
         </div>
       ) : (
