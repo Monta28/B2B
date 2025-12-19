@@ -31,7 +31,17 @@ export const Dashboard = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-accent/20">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Bonjour, <span className="text-accent">{user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Utilisateur'}</span></h1>
-          <p className="text-slate-400 mt-2 text-lg font-light">Espace client <span className="font-semibold text-accent">{user?.companyName}</span> {user?.dmsClientCode && <span className="text-sm text-slate-500">({user.dmsClientCode})</span>}</p>
+          <p className="text-slate-400 mt-2 text-lg font-light flex items-center gap-2 flex-wrap">
+            Espace client <span className="font-semibold text-accent">{user?.companyName}</span>
+            {user?.dmsClientCode && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30 shadow-sm">
+                <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                {user.dmsClientCode}
+              </span>
+            )}
+          </p>
         </div>
       </div>
 
