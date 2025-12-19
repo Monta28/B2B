@@ -110,7 +110,7 @@ export const Orders = () => {
   const { isDark } = useTheme();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]);
+  const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]);
   const isClientAdmin = hasRole([UserRole.CLIENT_ADMIN]);
   const isClient = hasRole([UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER]);
 
@@ -626,6 +626,66 @@ export const Orders = () => {
       toast.error(error.message || 'Erreur lors de la synchronisation');
     }
   });
+
+  // Référence pour la fonction de sync automatique
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Fonction de sync silencieuse (pas de toast sauf si données synchronisées)
+  const performAutoSync = useCallback(async () => {
+    try {
+      console.log('[Orders] Running automatic DMS sync...');
+      const result = await api.admin.syncDmsOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (result.synced > 0) {
+        toast.success(`${result.synced} commande(s) synchronisée(s) avec le DMS`);
+      }
+    } catch (error: any) {
+      console.error('[Orders] Auto sync error:', error);
+    }
+  }, [queryClient]);
+
+  // Synchronisation automatique DMS basée sur l'intervalle configuré
+  useEffect(() => {
+    console.log('[Orders] Config received:', { dmsSyncInterval: config.dmsSyncInterval, isInternal });
+
+    // Nettoyer l'intervalle existant
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+
+    if (!isInternal) {
+      console.log('[Orders] Auto sync disabled: not internal user');
+      return;
+    }
+    const intervalMinutes = config.dmsSyncInterval || 0;
+    if (intervalMinutes <= 0) {
+      console.log('[Orders] Auto sync disabled: interval is 0 or undefined');
+      return;
+    }
+
+    const intervalMs = intervalMinutes * 60 * 1000;
+    console.log(`[Orders] Auto DMS sync enabled: every ${intervalMinutes} minute(s) (${intervalMs}ms)`);
+
+    // Sync au montage avec délai de 2s
+    const initTimeout = setTimeout(() => {
+      performAutoSync();
+    }, 2000);
+
+    // Configurer l'intervalle de sync
+    syncIntervalRef.current = setInterval(() => {
+      performAutoSync();
+    }, intervalMs);
+
+    return () => {
+      clearTimeout(initTimeout);
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+      console.log('[Orders] Cleaning up DMS sync interval');
+    };
+  }, [isInternal, config.dmsSyncInterval, performAutoSync]);
 
   const handlePrintPreparation = async (orderId: string) => {
     const order = orders?.find(o => o.id === orderId);
