@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_LABELS_CLIENT } from '../constants';
@@ -55,7 +55,7 @@ export const Orders = () => {
   const { user, hasRole } = useAuth();
   const { formatPrice, config } = useConfig();
   const queryClient = useQueryClient();
-  const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]);
+  const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]);
   const isClientAdmin = hasRole([UserRole.CLIENT_ADMIN]);
 
   // WebSocket pour les notifications temps réel
@@ -93,8 +93,34 @@ export const Orders = () => {
   const syncDmsMutation = useMutation({ mutationFn: () => api.admin.syncDmsOrders(), onSuccess: (result: { synced: number; message: string }) => { queryClient.invalidateQueries({ queryKey: ['orders'] }); if (result.synced > 0) { toast.success(result.message); } else { toast(result.message, { icon: 'ℹ️' }); } }, onError: (error: any) => { toast.error(error.message || 'Erreur lors de la synchronisation'); } });
   const handlePrintPreparation = async (orderId: string) => { try { await api.printPreparationSlip(orderId); alert("Le bon de préparation a été envoyé à l'imprimante."); } catch (e) { alert("Erreur lors de l'impression."); } };
 
+  // Référence pour la fonction de sync (évite les re-renders)
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncRef = useRef<number>(0);
+
+  // Fonction de sync silencieuse (pas de toast sauf si données synchronisées)
+  const performAutoSync = useCallback(async () => {
+    try {
+      console.log('[Orders] Running automatic DMS sync...');
+      const result = await api.admin.syncDmsOrders();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (result.synced > 0) {
+        toast.success(`${result.synced} commande(s) synchronisée(s) avec le DMS`);
+      }
+      lastSyncRef.current = Date.now();
+    } catch (error: any) {
+      console.error('[Orders] Auto sync error:', error);
+      // Pas de toast pour les erreurs auto (évite le spam)
+    }
+  }, [queryClient]);
+
   // Synchronisation automatique DMS basée sur l'intervalle configuré
   useEffect(() => {
+    // Nettoyer l'intervalle existant
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+
     if (!isInternal) return; // Seulement pour les admins
     const intervalMinutes = config.dmsSyncInterval || 0;
     if (intervalMinutes <= 0) return; // Sync désactivée si 0 ou négatif
@@ -102,19 +128,25 @@ export const Orders = () => {
     const intervalMs = intervalMinutes * 60 * 1000;
     console.log(`[Orders] Auto DMS sync enabled: every ${intervalMinutes} minute(s)`);
 
-    // Sync au montage si l'intervalle est configuré
-    syncDmsMutation.mutate();
+    // Sync au montage si l'intervalle est configuré (avec délai de 2s)
+    const initTimeout = setTimeout(() => {
+      performAutoSync();
+    }, 2000);
 
-    const intervalId = setInterval(() => {
-      console.log('[Orders] Running automatic DMS sync...');
-      syncDmsMutation.mutate();
+    // Configurer l'intervalle de sync
+    syncIntervalRef.current = setInterval(() => {
+      performAutoSync();
     }, intervalMs);
 
     return () => {
+      clearTimeout(initTimeout);
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
       console.log('[Orders] Cleaning up DMS sync interval');
-      clearInterval(intervalId);
     };
-  }, [isInternal, config.dmsSyncInterval]);
+  }, [isInternal, config.dmsSyncInterval, performAutoSync]);
 
   const filteredAndSortedOrders = useMemo(() => {
     if (!orders) return [];
