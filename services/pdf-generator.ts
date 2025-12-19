@@ -35,6 +35,7 @@ interface BLGroup {
 
 interface CompanyInfo {
     companyName?: string;
+    companyLegalName?: string;
     companyAddress?: string;
     companyPostalCode?: string;
     companyCity?: string;
@@ -212,20 +213,24 @@ export const generateDocumentPdf = (data: DocumentPdfData, options: GeneratePdfO
                     yPos += 18;
                 }
             } catch (e) {
-                if (companyInfo.companyName) {
+                const displayName = companyInfo.companyLegalName || companyInfo.companyName;
+                if (displayName) {
                     doc.setFontSize(14);
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(0, 51, 102);
-                    doc.text(companyInfo.companyName, margin, yPos + 8);
+                    doc.text(displayName, margin, yPos + 8);
                     yPos += 12;
                 }
             }
-        } else if (companyInfo.companyName) {
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(0, 51, 102);
-            doc.text(companyInfo.companyName, margin, yPos + 8);
-            yPos += 12;
+        } else {
+            const displayName = companyInfo.companyLegalName || companyInfo.companyName;
+            if (displayName) {
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 51, 102);
+                doc.text(displayName, margin, yPos + 8);
+                yPos += 12;
+            }
         }
 
         // Company address and contact info

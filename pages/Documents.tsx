@@ -256,6 +256,7 @@ export const Documents = () => {
         summaryOnly: summaryOnly && hasBLInfo, // Only use summary mode if we have BL info
         companyInfo: {
           companyName: config.companyName,
+          companyLegalName: config.companyLegalName,
           companyAddress: config.companyAddress,
           companyPostalCode: config.companyPostalCode,
           companyCity: config.companyCity,
@@ -742,8 +743,8 @@ export const Documents = () => {
                     />
                   )}
                   <div>
-                    {config.companyName && (
-                      <h3 className="text-lg font-bold text-accent">{config.companyName}</h3>
+                    {(config.companyLegalName || config.companyName) && (
+                      <h3 className="text-lg font-bold text-accent">{config.companyLegalName || config.companyName}</h3>
                     )}
                     {config.companyAddress && (
                       <p className="text-xs text-slate-400">{config.companyAddress}</p>
