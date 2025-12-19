@@ -881,32 +881,66 @@ export class OrdersService {
       const month = String(today.getMonth() + 1).padStart(2, '0');
       // Format numérique: YYYYMM + 3 digits (ex: 202512001)
       const prefix = `${year}${month}`;
+      const minValue = parseInt(`${prefix}000`, 10);
+      const maxValue = parseInt(`${prefix}999`, 10);
 
       // Récupérer le dernier numéro de commande du mois en cours
+      // Utiliser CAST pour gérer les colonnes numériques correctement
       const result = await pool.request().query(`
         SELECT TOP 1 [${columnName}] as lastNum
         FROM [${tableName}]
-        WHERE [${columnName}] LIKE '${prefix}%'
-        ORDER BY [${columnName}] DESC
+        WHERE CAST([${columnName}] AS BIGINT) BETWEEN ${minValue} AND ${maxValue}
+        ORDER BY CAST([${columnName}] AS BIGINT) DESC
       `);
+
+      let newOrderNumber: string;
 
       if (result.recordset.length > 0 && result.recordset[0].lastNum) {
         const lastNum = String(result.recordset[0].lastNum);
+        console.log(`[OrdersService] Found last order number: ${lastNum}`);
         // Extraire la séquence (3 derniers chiffres)
         const sequence = parseInt(lastNum.slice(-3), 10);
-        if (!isNaN(sequence)) {
+        if (!isNaN(sequence) && sequence < 999) {
           // Incrémenter la séquence
-          return `${prefix}${String(sequence + 1).padStart(3, '0')}`;
+          newOrderNumber = `${prefix}${String(sequence + 1).padStart(3, '0')}`;
+        } else {
+          // Séquence max atteinte, utiliser timestamp pour ce mois
+          newOrderNumber = `${prefix}${String(Math.floor(Math.random() * 900) + 100)}`;
+        }
+      } else {
+        // Premier numéro du mois: YYYYMM001
+        newOrderNumber = `${prefix}001`;
+      }
+
+      // Vérifier que le numéro n'existe pas déjà (double sécurité)
+      const existsCheck = await pool.request().query(`
+        SELECT COUNT(*) as cnt FROM [${tableName}] WHERE [${columnName}] = '${newOrderNumber}'
+      `);
+
+      if (existsCheck.recordset[0].cnt > 0) {
+        console.warn(`[OrdersService] Order number ${newOrderNumber} already exists, generating alternative`);
+        // Trouver le prochain numéro disponible
+        for (let i = 1; i <= 999; i++) {
+          const candidate = `${prefix}${String(i).padStart(3, '0')}`;
+          const check = await pool.request().query(`
+            SELECT COUNT(*) as cnt FROM [${tableName}] WHERE [${columnName}] = '${candidate}'
+          `);
+          if (check.recordset[0].cnt === 0) {
+            newOrderNumber = candidate;
+            break;
+          }
         }
       }
 
-      // Premier numéro du mois: YYYYMM001
-      return `${prefix}001`;
+      console.log(`[OrdersService] Generated unique DMS order number: ${newOrderNumber}`);
+      return newOrderNumber;
 
     } catch (error) {
       console.error('[OrdersService] Error generating DMS order number:', error);
-      // Fallback: utiliser timestamp numérique
-      return String(Date.now());
+      // Fallback: utiliser un numéro basé sur timestamp plus court (compatible avec les colonnes numériques)
+      const ts = Date.now();
+      const shortTs = ts % 1000000000; // Garder les 9 derniers chiffres
+      return String(shortTs);
     }
   }
 }
