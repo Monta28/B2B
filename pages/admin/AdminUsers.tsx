@@ -81,7 +81,7 @@ export const AdminUsers = () => {
   });
 
   const resetPwdMutation = useMutation({
-    mutationFn: api.admin.resetUserPassword,
+    mutationFn: (userId: string) => api.admin.resetUserPassword(userId, 'password123'),
     onSuccess: () => toast.success("Mot de passe réinitialisé (Valeur temporaire: 'password123')")
   });
 
