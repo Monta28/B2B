@@ -23,39 +23,39 @@ export class CompaniesController {
   constructor(private companiesService: CompaniesService) {}
 
   @Get()
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN)
   async findAll() {
     return this.companiesService.findAll();
   }
 
   // Get clients from DMS SQL Server
   @Get('dms/clients')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async getDmsClients() {
     return this.companiesService.getDmsClients();
   }
 
   @Get(':id')
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN)
   async findOne(@Param('id') id: string) {
     return this.companiesService.findOne(id);
   }
 
   @Post()
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async create(@Body() createCompanyDto: CreateCompanyDto, @Request() req) {
     return this.companiesService.create(createCompanyDto, req.user.id);
   }
 
   // Import multiple clients from DMS
   @Post('import')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async importClients(@Body() body: { clients: ImportClientDto[] }, @Request() req) {
     return this.companiesService.importClients(body.clients, req.user.id);
   }
 
   @Put(':id')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async update(
     @Param('id') id: string,
     @Body() updateCompanyDto: UpdateCompanyDto,
@@ -65,20 +65,20 @@ export class CompaniesController {
   }
 
   @Patch(':id/status')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async toggleStatus(@Param('id') id: string, @Request() req) {
     return this.companiesService.toggleStatus(id, req.user.id);
   }
 
   @Delete(':id')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async remove(@Param('id') id: string, @Request() req) {
     return this.companiesService.remove(id, req.user.id);
   }
 
   // Bulk delete companies
   @Post('bulk-delete')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async bulkDelete(@Body() body: { ids: string[] }, @Request() req) {
     return this.companiesService.bulkDelete(body.ids, req.user.id);
   }

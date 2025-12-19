@@ -104,6 +104,7 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
     numFacture: 'Numéro Facture',
     numLigne: 'Numéro Ligne',
     numBL: 'Numéro BL (pour regroupement)',
+    numCommande: 'Numéro Commande (lien)',
     dateBL: 'Date BL',
     codeArticle: 'Code Article',
     designation: 'Désignation',
@@ -128,6 +129,7 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
   bl_detail: {
     numBL: 'Numéro BL',
     numLigne: 'Numéro Ligne',
+    numCommande: 'Numéro Commande (lien)',
     codeArticle: 'Code Article',
     designation: 'Désignation',
     quantite: 'Quantité',
@@ -355,9 +357,21 @@ const CITIES_BY_COUNTRY: Record<string, string[]> = {
   'Autre': [] // Special case for manual input
 };
 
+// Tab configuration
+type ConfigTab = 'branding' | 'company' | 'system' | 'dms' | 'mapping';
+
+const TAB_LABELS: Record<ConfigTab, { label: string; icon: string }> = {
+  branding: { label: 'Branding & Thème', icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
+  company: { label: 'Informations Société', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  system: { label: 'Paramètres Système', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  dms: { label: 'Connexion DMS', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4' },
+  mapping: { label: 'Mappage Tables', icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
+};
+
 export const AdminConfig = () => {
   const queryClient = useQueryClient();
   const { config: appConfig, updateConfig } = useConfig();
+  const [activeTab, setActiveTab] = useState<ConfigTab>('branding');
   const [config, setConfig] = useState<SqlServerConfig>({ host: '', port: 1433, database: '', user: '', encrypted: false, syncInterval: 5 });
   const [catalogLoadMode, setCatalogLoadMode] = useState<'auto' | 'search'>('auto');
   const [password, setPassword] = useState('');
@@ -747,14 +761,38 @@ export const AdminConfig = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <h1 className="text-2xl font-bold text-white">Configuration Globale</h1>
+    <div className="max-w-[1800px] mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-white">Configuration Globale</h1>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex flex-wrap gap-2 p-1 bg-brand-900/40 rounded-xl border border-accent/10">
+        {(Object.keys(TAB_LABELS) as ConfigTab[]).map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === tab
+                ? 'bg-accent text-white shadow-glow'
+                : 'text-slate-300 hover:text-white hover:bg-brand-800/60'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={TAB_LABELS[tab].icon} />
+            </svg>
+            {TAB_LABELS[tab].label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'branding' && (
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-slate-200">Paramètres d'Affichage & Sécurité</h2>
+        <h2 className="text-lg font-bold text-slate-200">Branding & Thème</h2>
         <form onSubmit={handleAppConfigSubmit} className="card-futuristic p-6 rounded-2xl shadow-card border border-accent/10 space-y-6">
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Branding & Thème</h3>
-
             <div>
               <label className="block text-sm font-medium text-slate-300">Nom de l'application</label>
               <input
@@ -893,13 +931,30 @@ export const AdminConfig = () => {
                 placeholder='{"--my-var":"value"}'
               />
             </div>
+
+            {/* Logos Branding */}
+            <div className="border border-accent/10 rounded-xl p-4 bg-brand-900/30">
+              <label className="block text-sm font-medium text-slate-300 mb-2">Logos Branding</label>
+              <input type="file" accept="image/*" multiple onChange={handleFileUpload} className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-accent/10 file:text-accent hover:file:bg-accent/20"/>
+              <div className="flex flex-wrap gap-3 mt-3">{logos.map((logo, idx) => (<div key={idx} className="relative group border border-accent/20 rounded-lg bg-brand-900/30 p-1"><img src={logo} alt="Logo" className="h-10 w-auto object-contain" /><button type="button" onClick={() => setLogos(logos.filter((_, i) => i !== idx))} className="absolute -top-2 -right-2 bg-neon-pink text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-neon-pink/80 transition-colors">✕</button></div>))}</div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex justify-end"><button type="submit" className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-xl font-bold shadow-glow btn-glow transition-colors">Mettre à jour</button></div>
+        </form>
+      </div>
+      )}
+
+      {/* System Tab */}
+      {activeTab === 'system' && (
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-slate-200">Paramètres Système</h2>
+        <form onSubmit={handleAppConfigSubmit} className="card-futuristic p-6 rounded-2xl shadow-card border border-accent/10 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div><label className="block text-sm font-medium text-slate-300">Symbole Devise</label><input type="text" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={currency} onChange={e => setCurrency(e.target.value)} /></div>
             <div><label className="block text-sm font-medium text-slate-300">Décimales</label><input type="number" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={decimals} onChange={e => setDecimals(Number(e.target.value))} /></div>
+            <div><label className="block text-sm font-medium text-slate-300">Délai sécurité validation (s)</label><input type="number" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={cooldown} onChange={e => setCooldown(Number(e.target.value))} /></div>
           </div>
-          <div><label className="block text-sm font-medium text-slate-300">Délai sécurité validation (s)</label><input type="number" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={cooldown} onChange={e => setCooldown(Number(e.target.value))} /></div>
-          
+
           {/* Weather Location Selectors */}
           <div className="border-t border-accent/10 pt-4">
             <label className="block text-sm font-medium text-slate-300 mb-2">Ville (Météo)</label>
@@ -947,49 +1002,55 @@ export const AdminConfig = () => {
             </div>
           </div>
 
-          {/* Company Details for Documents Section */}
-          <div className="border-t border-accent/10 pt-4">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider mb-4">Informations Société (Documents)</h3>
-            <p className="text-xs text-slate-500 mb-4">Ces informations apparaîtront sur les documents téléchargés (factures, bons de livraison, etc.)</p>
+          <div className="flex justify-end"><button type="submit" className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-xl font-bold shadow-glow btn-glow transition-colors">Mettre à jour</button></div>
+        </form>
+      </div>
+      )}
 
-            {/* Logo for Documents */}
-            <div className="border border-accent/10 rounded-xl p-4 bg-brand-900/30 mb-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Logo pour Documents</label>
-              <p className="text-xs text-slate-500 mb-2">Peut être différent du logo de l'application</p>
-              <input type="file" accept="image/*" onChange={handleDocumentLogoUpload} className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-accent/10 file:text-accent hover:file:bg-accent/20"/>
-              {documentLogoUrl && (
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-accent/20 bg-brand-900/30 p-2">
-                  <img src={documentLogoUrl} alt="Document Logo" className="h-12 w-auto object-contain" />
-                  <button type="button" onClick={() => setDocumentLogoUrl(undefined)} className="text-xs text-neon-pink hover:text-neon-pink/80">Supprimer</button>
-                </div>
-              )}
-              <div className="mt-2">
-                <label className="block text-xs text-slate-500">Ou URL du logo</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                  value={documentLogoUrl || ''}
-                  onChange={e => setDocumentLogoUrl(e.target.value || undefined)}
-                  placeholder="https://..."
-                />
+      {/* Company Tab */}
+      {activeTab === 'company' && (
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-slate-200">Informations Société (Documents)</h2>
+        <p className="text-slate-400 text-sm">Ces informations apparaîtront sur les documents téléchargés (factures, bons de livraison, etc.)</p>
+        <form onSubmit={handleAppConfigSubmit} className="card-futuristic p-6 rounded-2xl shadow-card border border-accent/10 space-y-6">
+          {/* Logo for Documents */}
+          <div className="border border-accent/10 rounded-xl p-4 bg-brand-900/30">
+            <label className="block text-sm font-medium text-slate-300 mb-2">Logo pour Documents</label>
+            <p className="text-xs text-slate-500 mb-2">Peut être différent du logo de l'application</p>
+            <input type="file" accept="image/*" onChange={handleDocumentLogoUpload} className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-accent/10 file:text-accent hover:file:bg-accent/20"/>
+            {documentLogoUrl && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-accent/20 bg-brand-900/30 p-2">
+                <img src={documentLogoUrl} alt="Document Logo" className="h-12 w-auto object-contain" />
+                <button type="button" onClick={() => setDocumentLogoUrl(undefined)} className="text-xs text-neon-pink hover:text-neon-pink/80">Supprimer</button>
               </div>
+            )}
+            <div className="mt-2">
+              <label className="block text-xs text-slate-500">Ou URL du logo</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                value={documentLogoUrl || ''}
+                onChange={e => setDocumentLogoUrl(e.target.value || undefined)}
+                placeholder="https://..."
+              />
             </div>
+          </div>
 
-            {/* Address */}
-            <div className="grid grid-cols-1 gap-3 mb-3">
-              <div>
-                <label className="block text-sm font-medium text-slate-300">Adresse</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                  value={companyAddress}
-                  onChange={e => setCompanyAddress(e.target.value)}
-                  placeholder="Ex: 123 Rue Principale"
-                />
-              </div>
+          {/* Address */}
+          <div className="grid grid-cols-1 gap-3 mb-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-300">Adresse</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                value={companyAddress}
+                onChange={e => setCompanyAddress(e.target.value)}
+                placeholder="Ex: 123 Rue Principale"
+              />
             </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="grid grid-cols-3 gap-3 mb-3">
               <div>
                 <label className="block text-sm font-medium text-slate-300">Code Postal</label>
                 <input
@@ -1130,26 +1191,24 @@ export const AdminConfig = () => {
               </div>
             </div>
 
-            {/* Footer Text */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-300">Texte de pied de page (documents)</label>
-              <textarea
-                className="mt-1 w-full min-h-[80px] border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
-                value={documentFooterText}
-                onChange={e => setDocumentFooterText(e.target.value)}
-                placeholder="Ex: Merci pour votre confiance. Pour toute réclamation, veuillez nous contacter dans les 48 heures."
-              />
-            </div>
+          {/* Footer Text */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-slate-300">Texte de pied de page (documents)</label>
+            <textarea
+              className="mt-1 w-full min-h-[80px] border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+              value={documentFooterText}
+              onChange={e => setDocumentFooterText(e.target.value)}
+              placeholder="Ex: Merci pour votre confiance. Pour toute réclamation, veuillez nous contacter dans les 48 heures."
+            />
           </div>
 
-          <div className="border-t border-accent/10 pt-4">
-             <label className="block text-sm font-medium text-slate-300 mb-2">Logos Branding</label>
-             <input type="file" accept="image/*" multiple onChange={handleFileUpload} className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-accent/10 file:text-accent hover:file:bg-accent/20"/>
-             <div className="flex flex-wrap gap-3 mt-3">{logos.map((logo, idx) => (<div key={idx} className="relative group border border-accent/20 rounded-lg bg-brand-900/30 p-1"><img src={logo} alt="Logo" className="h-10 w-auto object-contain" /><button type="button" onClick={() => setLogos(logos.filter((_, i) => i !== idx))} className="absolute -top-2 -right-2 bg-neon-pink text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-neon-pink/80 transition-colors">✕</button></div>))}</div>
-          </div>
           <div className="flex justify-end"><button type="submit" className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-xl font-bold shadow-glow btn-glow transition-colors">Mettre à jour</button></div>
         </form>
       </div>
+      )}
+
+      {/* DMS Tab */}
+      {activeTab === 'dms' && (
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-slate-200">Connexion SQL Server (DMS)</h2>
         <p className="text-slate-400 text-sm">Paramétrez la connexion au serveur de données principal.</p>
@@ -1308,8 +1367,10 @@ export const AdminConfig = () => {
           </div>
         </form>
       </div>
+      )}
 
-      {/* DMS Table Mapping Section */}
+      {/* Mapping Tab */}
+      {activeTab === 'mapping' && (
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-slate-200">Mappage des Tables DMS</h2>
         <p className="text-slate-400 text-sm">Configurez le mappage entre les colonnes de votre DMS et les champs de l'application.</p>
@@ -1514,6 +1575,7 @@ export const AdminConfig = () => {
           </div>
         </div>
       </div>
+      )}
 
       <ConfirmModal
         isOpen={showConfigConfirm}

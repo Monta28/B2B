@@ -110,7 +110,8 @@ export class OrdersService {
     let totalHt = 0;
     console.log('[DEBUG Backend] Items reçus:', JSON.stringify(createOrderDto.items.map(i => ({ ref: i.productRef, tvaRate: i.tvaRate }))));
     const items = createOrderDto.items.map((item) => {
-      const lineTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100);
+      // Arrondir à 2 décimales pour éviter les erreurs de précision
+      const lineTotal = Math.round(item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100) * 100) / 100;
       totalHt += lineTotal;
 
       const tvaRateValue = item.tvaRate ?? 7;
@@ -136,7 +137,7 @@ export class OrdersService {
       orderType: createOrderDto.orderType,
       vehicleInfo: createOrderDto.vehicleInfo,
       clientNotes: createOrderDto.clientNotes,
-      totalHt,
+      totalHt: Math.round(totalHt * 100) / 100, // Arrondir à 2 décimales
       status: OrderStatus.PENDING,
     });
 
@@ -182,7 +183,7 @@ export class OrdersService {
     try {
       // Trouver tous les admins
       const admins = await this.userRepository.find({
-        where: { role: In([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]) },
+        where: { role: In([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]) },
       });
 
       console.log(`[OrdersService] Found ${admins.length} admins to notify:`, admins.map(a => ({ id: a.id, email: a.email, role: a.role })));
@@ -230,7 +231,8 @@ export class OrdersService {
       // Calculate new totals and create new items
       let totalHt = 0;
       const items = updateOrderDto.items.map((item) => {
-        const lineTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100);
+        // Arrondir à 2 décimales pour éviter les erreurs de précision
+        const lineTotal = Math.round(item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100) * 100) / 100;
         totalHt += lineTotal;
 
         return this.orderItemRepository.create({
@@ -247,7 +249,7 @@ export class OrdersService {
       });
 
       const savedItems = await this.orderItemRepository.save(items);
-      order.totalHt = totalHt;
+      order.totalHt = Math.round(totalHt * 100) / 100; // Arrondir à 2 décimales
       // Update the order.items reference to prevent cascade conflicts
       order.items = savedItems;
     }
@@ -287,7 +289,7 @@ export class OrdersService {
   async updateStatus(id: string, updateStatusDto: UpdateOrderStatusDto, currentUser: any): Promise<Order> {
     const order = await this.findOne(id, currentUser);
 
-    const isAdmin = [UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN].includes(currentUser.role);
+    const isAdmin = [UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN].includes(currentUser.role);
     const isClient = [UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER].includes(currentUser.role);
 
     // Clients can only cancel their own PENDING orders
@@ -614,15 +616,25 @@ export class OrdersService {
           console.log(`[OrdersService] Header INSERT query: ${headerInsertQuery}`);
           console.log(`[OrdersService] Header values:`, headerValues.map((v, i) => `${headerColumns[i]}=${v} (${typeof v})`));
 
-          const headerRequest = pool.request();
+          // Champs qui doivent rester en string (codes avec zéros en tête)
+        const stringFields = ['codeClient', 'codeArticle', 'numCommande', 'designation', 'adresseLivraison', 'status', 'orderType', 'devise'];
+        const headerFieldNames = Object.keys(headerMapping.columns).filter(k => headerMapping.columns[k] && headerMapping.columns[k].trim() !== '' && headerData[k] !== undefined);
+
+        const headerRequest = pool.request();
           headerValues.forEach((value, index) => {
             const paramName = `p${index + 1}`;
+            const fieldName = headerFieldNames[index];
+            const isStringField = stringFields.includes(fieldName);
+
             if (value === null) {
               headerRequest.input(paramName, sql.NVarChar, null);
             } else if (value instanceof Date) {
               headerRequest.input(paramName, sql.DateTime, value);
             } else if (typeof value === 'number') {
               headerRequest.input(paramName, sql.Float, value);
+            } else if (isStringField) {
+              // Garder comme string sans conversion (préserver les zéros en tête)
+              headerRequest.input(paramName, sql.NVarChar, String(value));
             } else {
               // Essayer de convertir en nombre si c'est une chaîne numérique
               const numValue = Number(value);
@@ -682,15 +694,25 @@ export class OrdersService {
           if (detailColumns.length > 0) {
             const detailInsertQuery = `INSERT INTO [${detailMapping.tableName}] (${detailColumns.join(', ')}) VALUES (${detailParams.join(', ')})`;
 
+            // Champs qui doivent rester en string (codes avec zéros en tête)
+            const detailStringFields = ['codeClient', 'codeArticle', 'numCommande', 'designation', 'devise', 'typeDC'];
+            const detailFieldNames = Object.keys(detailMapping.columns).filter(k => detailMapping.columns[k] && detailMapping.columns[k].trim() !== '' && detailData[k] !== undefined);
+
             const detailRequest = pool.request();
             detailValues.forEach((value, index) => {
               const paramName = `p${index + 1}`;
+              const fieldName = detailFieldNames[index];
+              const isStringField = detailStringFields.includes(fieldName);
+
               if (value === null) {
                 detailRequest.input(paramName, sql.NVarChar, null);
               } else if (value instanceof Date) {
                 detailRequest.input(paramName, sql.DateTime, value);
               } else if (typeof value === 'number') {
                 detailRequest.input(paramName, sql.Float, value);
+              } else if (isStringField) {
+                // Garder comme string sans conversion (préserver les zéros en tête)
+                detailRequest.input(paramName, sql.NVarChar, String(value));
               } else {
                 // Essayer de convertir en nombre si c'est une chaîne numérique
                 const numValue = Number(value);
@@ -726,32 +748,160 @@ export class OrdersService {
     }
   }
 
+  // Synchroniser les commandes avec le DMS pour détecter les BL et factures
+  async syncOrdersFromDms(): Promise<{ synced: number; errors: string[] }> {
+    console.log('[OrdersService] Starting DMS sync for BL and invoices...');
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      // Récupérer les mappings pour BL et Factures
+      const blDetailMapping = await this.dmsMappingService.getMappingConfig('bl_detail');
+      const blHeaderMapping = await this.dmsMappingService.getMappingConfig('bl_entete');
+      const factureDetailMapping = await this.dmsMappingService.getMappingConfig('factures_detail');
+      const factureHeaderMapping = await this.dmsMappingService.getMappingConfig('factures_entete');
+
+      if (!blDetailMapping || !blHeaderMapping) {
+        errors.push('Mapping DMS pour BL non configuré');
+        return { synced: 0, errors };
+      }
+
+      // Connexion SQL Server
+      const pool = await this.appConfigService.getSqlConnection();
+      if (!pool) {
+        errors.push('Impossible de se connecter au serveur SQL DMS');
+        return { synced: 0, errors };
+      }
+
+      try {
+        // Récupérer les commandes VALIDATED sans BL (qui ont un dmsRef)
+        const ordersToCheck = await this.orderRepository.find({
+          where: [
+            { status: OrderStatus.VALIDATED, blNumber: null as any },
+            { status: OrderStatus.PREPARATION, blNumber: null as any },
+            { status: OrderStatus.SHIPPED, invoiceNumber: null as any },
+          ],
+        });
+
+        console.log(`[OrdersService] Found ${ordersToCheck.length} orders to check for BL/invoices`);
+
+        for (const order of ordersToCheck) {
+          if (!order.dmsRef) continue; // Pas de ref DMS, on ne peut pas chercher
+
+          try {
+            // Vérifier si un BL existe pour cette commande
+            if (!order.blNumber && blDetailMapping.columns.numCommande) {
+              const blResult = await pool.request()
+                .input('numCmd', sql.NVarChar, order.dmsRef)
+                .query(`
+                  SELECT DISTINCT d.[${blDetailMapping.columns.numBL}] as numBL, h.[${blHeaderMapping.columns.dateBL}] as dateBL
+                  FROM [${blDetailMapping.tableName}] d
+                  LEFT JOIN [${blHeaderMapping.tableName}] h ON d.[${blDetailMapping.columns.numBL}] = h.[${blHeaderMapping.columns.numBL}]
+                  WHERE d.[${blDetailMapping.columns.numCommande}] = @numCmd
+                `);
+
+              if (blResult.recordset.length > 0) {
+                const blData = blResult.recordset[0];
+                order.blNumber = String(blData.numBL);
+                order.blDate = blData.dateBL ? new Date(blData.dateBL) : new Date();
+
+                // Mettre à jour le statut si pas encore SHIPPED ou plus
+                if (order.status === OrderStatus.VALIDATED || order.status === OrderStatus.PREPARATION) {
+                  const oldStatus = order.status;
+                  order.status = OrderStatus.SHIPPED;
+
+                  // Notifier le client du changement de statut
+                  await this.notifyClientStatusChange(order, oldStatus, OrderStatus.SHIPPED, true);
+                }
+
+                console.log(`[OrdersService] Order ${order.orderNumber} has BL: ${order.blNumber}`);
+                synced++;
+              }
+            }
+
+            // Vérifier si une facture existe pour cette commande
+            if (!order.invoiceNumber && factureDetailMapping && factureHeaderMapping && factureDetailMapping.columns.numCommande) {
+              const factureResult = await pool.request()
+                .input('numCmd', sql.NVarChar, order.dmsRef)
+                .query(`
+                  SELECT DISTINCT d.[${factureDetailMapping.columns.numFacture}] as numFacture, h.[${factureHeaderMapping.columns.dateFacture}] as dateFacture
+                  FROM [${factureDetailMapping.tableName}] d
+                  LEFT JOIN [${factureHeaderMapping.tableName}] h ON d.[${factureDetailMapping.columns.numFacture}] = h.[${factureHeaderMapping.columns.numFacture}]
+                  WHERE d.[${factureDetailMapping.columns.numCommande}] = @numCmd
+                `);
+
+              if (factureResult.recordset.length > 0) {
+                const factureData = factureResult.recordset[0];
+                order.invoiceNumber = String(factureData.numFacture);
+                order.invoiceDate = factureData.dateFacture ? new Date(factureData.dateFacture) : new Date();
+
+                // Mettre à jour le statut si pas encore INVOICED
+                if (order.status !== OrderStatus.INVOICED && order.status !== OrderStatus.CANCELLED) {
+                  const oldStatus = order.status;
+                  order.status = OrderStatus.INVOICED;
+
+                  // Notifier le client du changement de statut
+                  await this.notifyClientStatusChange(order, oldStatus, OrderStatus.INVOICED, true);
+                }
+
+                console.log(`[OrdersService] Order ${order.orderNumber} has invoice: ${order.invoiceNumber}`);
+                synced++;
+              }
+            }
+
+            // Sauvegarder les modifications
+            order.lastModifiedAt = new Date();
+            await this.orderRepository.save(order);
+
+          } catch (orderError: any) {
+            console.error(`[OrdersService] Error syncing order ${order.orderNumber}:`, orderError);
+            errors.push(`Erreur pour commande ${order.orderNumber}: ${orderError.message}`);
+          }
+        }
+
+        console.log(`[OrdersService] DMS sync completed: ${synced} orders synced`);
+
+      } finally {
+        await pool.close();
+      }
+
+    } catch (error: any) {
+      console.error('[OrdersService] DMS sync error:', error);
+      errors.push(error.message || 'Erreur lors de la synchronisation DMS');
+    }
+
+    return { synced, errors };
+  }
+
   // Générer un numéro de commande unique pour le DMS (format numérique: YYYYMM + séquence)
   private async generateDmsOrderNumber(pool: sql.ConnectionPool, tableName: string, columnName: string): Promise<string> {
     try {
-      // Récupérer le dernier numéro de commande
-      const result = await pool.request().query(`
-        SELECT TOP 1 [${columnName}] as lastNum
-        FROM [${tableName}]
-        ORDER BY [${columnName}] DESC
-      `);
-
       const today = new Date();
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');
-      // Format numérique uniquement: YYYYMM + 5 digits (ex: 20251200001)
+      // Format numérique: YYYYMM + 3 digits (ex: 202512001)
       const prefix = `${year}${month}`;
 
+      // Récupérer le dernier numéro de commande du mois en cours
+      const result = await pool.request().query(`
+        SELECT TOP 1 [${columnName}] as lastNum
+        FROM [${tableName}]
+        WHERE [${columnName}] LIKE '${prefix}%'
+        ORDER BY [${columnName}] DESC
+      `);
+
       if (result.recordset.length > 0 && result.recordset[0].lastNum) {
-        const lastNum = Number(result.recordset[0].lastNum);
-        if (!isNaN(lastNum) && lastNum > 0) {
-          // Incrémenter le dernier numéro
-          return String(lastNum + 1);
+        const lastNum = String(result.recordset[0].lastNum);
+        // Extraire la séquence (3 derniers chiffres)
+        const sequence = parseInt(lastNum.slice(-3), 10);
+        if (!isNaN(sequence)) {
+          // Incrémenter la séquence
+          return `${prefix}${String(sequence + 1).padStart(3, '0')}`;
         }
       }
 
-      // Premier numéro du mois: YYYYMM00001
-      return `${prefix}00001`;
+      // Premier numéro du mois: YYYYMM001
+      return `${prefix}001`;
 
     } catch (error) {
       console.error('[OrdersService] Error generating DMS order number:', error);

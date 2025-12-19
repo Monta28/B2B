@@ -9,6 +9,16 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   [OrderStatus.CANCELLED]: 'Annulée',
 };
 
+// Labels simplifiés pour les clients (sans mention DMS)
+export const ORDER_STATUS_LABELS_CLIENT: Record<OrderStatus, string> = {
+  [OrderStatus.PENDING]: 'En attente validation',
+  [OrderStatus.VALIDATED]: 'Validée',
+  [OrderStatus.PREPARATION]: 'En préparation',
+  [OrderStatus.SHIPPED]: 'Expédié',
+  [OrderStatus.INVOICED]: 'Facturé',
+  [OrderStatus.CANCELLED]: 'Annulée',
+};
+
 export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
   [OrderStatus.VALIDATED]: 'bg-blue-50 text-blue-600 border border-blue-200',

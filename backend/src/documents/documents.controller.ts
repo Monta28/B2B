@@ -19,10 +19,10 @@ export class DocumentsController {
 
   // Get all documents (admin sees all, clients see their own)
   @Get()
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
   async findAll(@Req() req: any) {
     const user = req.user;
-    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
+    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.FULL_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
 
     if (isAdmin) {
       // Admin sees all documents
@@ -42,10 +42,10 @@ export class DocumentsController {
 
   // Get only invoices
   @Get('invoices')
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
   async getInvoices(@Req() req: any) {
     const user = req.user;
-    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
+    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.FULL_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
 
     if (isAdmin) {
       const invoices = await this.documentsService.getInvoices();
@@ -61,10 +61,10 @@ export class DocumentsController {
 
   // Get only delivery notes (BL)
   @Get('delivery-notes')
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
   async getDeliveryNotes(@Req() req: any) {
     const user = req.user;
-    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
+    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.FULL_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
 
     if (isAdmin) {
       const deliveryNotes = await this.documentsService.getDeliveryNotes();
@@ -80,10 +80,10 @@ export class DocumentsController {
 
   // Get invoice with lines
   @Get('invoices/:numFacture')
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
   async getInvoiceDetail(@Param('numFacture') numFacture: string, @Req() req: any) {
     const user = req.user;
-    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
+    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.FULL_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
 
     if (isAdmin) {
       return this.documentsService.getInvoiceWithLines(numFacture);
@@ -98,10 +98,10 @@ export class DocumentsController {
 
   // Get delivery note with lines
   @Get('delivery-notes/:numBL')
-  @Roles(UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN, UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER)
   async getDeliveryNoteDetail(@Param('numBL') numBL: string, @Req() req: any) {
     const user = req.user;
-    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
+    const isAdmin = user.role === UserRole.SYSTEM_ADMIN || user.role === UserRole.FULL_ADMIN || user.role === UserRole.PARTIAL_ADMIN;
 
     if (isAdmin) {
       return this.documentsService.getDeliveryNoteWithLines(numBL);

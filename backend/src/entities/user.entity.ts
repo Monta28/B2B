@@ -7,6 +7,7 @@ import { Cart } from './cart.entity';
 
 export enum UserRole {
   SYSTEM_ADMIN = 'SYSTEM_ADMIN',
+  FULL_ADMIN = 'FULL_ADMIN',
   PARTIAL_ADMIN = 'PARTIAL_ADMIN',
   CLIENT_ADMIN = 'CLIENT_ADMIN',
   CLIENT_USER = 'CLIENT_USER',

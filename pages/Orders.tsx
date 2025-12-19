@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../services/api';
-import { ORDER_STATUS_LABELS } from '../constants';
+import { ORDER_STATUS_LABELS, ORDER_STATUS_LABELS_CLIENT } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { UserRole, OrderStatus, Order, AppConfig, Product, ClientPrice } from '../types';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -612,6 +612,21 @@ export const Orders = () => {
     }
   });
 
+  const syncDmsMutation = useMutation({
+    mutationFn: () => api.admin.syncDmsOrders(),
+    onSuccess: (result: { synced: number; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (result.synced > 0) {
+        toast.success(result.message);
+      } else {
+        toast(result.message, { icon: 'ℹ️' });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erreur lors de la synchronisation');
+    }
+  });
+
   const handlePrintPreparation = async (orderId: string) => {
     const order = orders?.find(o => o.id === orderId);
     if (!order) {
@@ -685,7 +700,7 @@ export const Orders = () => {
             <h3>Informations Commande</h3>
             <p><strong>N° Commande:</strong> ${orderNum}</p>
             <p><strong>Date:</strong> ${formattedDate}</p>
-            <p><strong>Statut:</strong> ${ORDER_STATUS_LABELS[order.status]}</p>
+            <p><strong>Statut:</strong> ${isInternal ? ORDER_STATUS_LABELS[order.status] : ORDER_STATUS_LABELS_CLIENT[order.status]}</p>
             ${order.vehicleInfo ? `<p><strong>Véhicule:</strong> ${order.vehicleInfo}</p>` : ''}
             ${order.dmsRef ? `<p><strong>Réf. DMS:</strong> ${order.dmsRef}</p>` : ''}
           </div>
@@ -899,6 +914,21 @@ export const Orders = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-end">
+          {/* Bouton Sync DMS pour les admins */}
+          {isInternal && (
+            <button
+              onClick={() => syncDmsMutation.mutate()}
+              disabled={syncDmsMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-neon-purple/20 hover:bg-neon-purple/30 text-neon-purple border border-neon-purple/30 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Synchroniser avec le DMS pour détecter les BL et factures"
+            >
+              <svg className={`w-5 h-5 ${syncDmsMutation.isPending ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-sm font-medium">{syncDmsMutation.isPending ? 'Sync...' : 'Sync DMS'}</span>
+            </button>
+          )}
+
           {/* Bouton Nouvelle Commande pour les clients */}
           {isClient && (
             <button
@@ -1040,7 +1070,7 @@ export const Orders = () => {
                   >
                     <option value="">Tous</option>
                     {getStatusOptions().map(status => (
-                      <option key={status} value={status}>{ORDER_STATUS_LABELS[status]}</option>
+                      <option key={status} value={status}>{isInternal ? ORDER_STATUS_LABELS[status] : ORDER_STATUS_LABELS_CLIENT[status]}</option>
                     ))}
                   </select>
                 </th>
@@ -1132,12 +1162,26 @@ export const Orders = () => {
                         ) : (
                           <span className="text-slate-500 italic text-xs font-medium">En attente ID</span>
                         )}
+                        <div className="flex gap-1 flex-wrap">
+                          {order.blNumber && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-neon-purple/20 text-neon-purple border border-neon-purple/30 flex items-center">
+                              <svg className="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                              BL: {order.blNumber}
+                            </span>
+                          )}
+                          {order.invoiceNumber && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-neon-green/20 text-neon-green border border-neon-green/30 flex items-center">
+                              <svg className="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                              Fact: {order.invoiceNumber}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-3 py-3 text-sm text-slate-400 font-medium">{order.date}</td>
                     <td className="px-3 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold border ${MODERN_STATUS_STYLES[order.status]} shadow-sm`}>
-                        {ORDER_STATUS_LABELS[order.status]}
+                        {isInternal ? ORDER_STATUS_LABELS[order.status] : ORDER_STATUS_LABELS_CLIENT[order.status]}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right">

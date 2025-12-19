@@ -563,6 +563,11 @@ export const api = {
     }),
 
     deleteDmsMapping: (id: string) => fetchApi<{ message: string }>(`/admin/dms-mapping/${id}`, { method: 'DELETE' }),
+
+    // DMS Sync - synchroniser les commandes avec BL/Factures du DMS
+    syncDmsOrders: () => fetchApi<{ success: boolean; synced: number; errors: string[]; message: string }>('/orders/sync-dms', {
+      method: 'POST',
+    }),
   },
 };
 

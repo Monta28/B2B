@@ -1,6 +1,7 @@
 
 export enum UserRole {
-  SYSTEM_ADMIN = 'SYSTEM_ADMIN', // Config, Users, Orders
+  SYSTEM_ADMIN = 'SYSTEM_ADMIN', // Config, Users, Orders, Companies, News, Audit
+  FULL_ADMIN = 'FULL_ADMIN', // Same as SYSTEM_ADMIN but NO Config access
   PARTIAL_ADMIN = 'PARTIAL_ADMIN', // Orders only
   CLIENT_ADMIN = 'CLIENT_ADMIN', // Company Users, Orders (Cancel), View
   CLIENT_USER = 'CLIENT_USER' // View only
@@ -129,6 +130,10 @@ export interface Order {
   orderNumber?: string; // N° de commande (ex: CMD-20251217-0001)
   orderType: OrderType; // STOCK or QUICK
   dmsRef?: string; // Peut être null si pas encore dans SQL Server
+  blNumber?: string; // Numéro du Bon de Livraison
+  blDate?: string; // Date du BL
+  invoiceNumber?: string; // Numéro de facture
+  invoiceDate?: string; // Date de facture
   isEditing?: boolean; // Verrouillage en cours de modification par client
   editingByUserId?: string; // ID de l'utilisateur qui modifie
   editingByUser?: { id: string; fullName: string }; // Utilisateur qui modifie

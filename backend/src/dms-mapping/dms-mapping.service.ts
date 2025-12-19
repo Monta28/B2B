@@ -84,6 +84,7 @@ export const DEFAULT_MAPPINGS: Record<string, Record<string, string>> = {
     numFacture: 'Num_Facture',
     numLigne: 'Num_Ligne',
     numBL: 'Num_BL',
+    numCommande: 'Num_Cmd', // Lien vers la commande d'origine
     dateBL: 'Date_BL',
     codeArticle: 'Code_Article',
     designation: 'Designation',
@@ -108,6 +109,7 @@ export const DEFAULT_MAPPINGS: Record<string, Record<string, string>> = {
   bl_detail: {
     numBL: 'Num_BL',
     numLigne: 'Num_Ligne',
+    numCommande: 'Num_Cmd', // Lien vers la commande d'origine
     codeArticle: 'Code_Article',
     designation: 'Designation',
     quantite: 'Quantite',

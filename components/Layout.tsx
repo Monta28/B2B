@@ -37,7 +37,7 @@ export const Layout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-  const [weather, setWeather] = useState<{temp: number, icon: string} | null>(null);
+  const [weather, setWeather] = useState<{ temp: number, icon: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -59,13 +59,14 @@ export const Layout = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const navItemClass = (path: string, isMobile: boolean = false) => `flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group relative ${
-    location.pathname.startsWith(path)
-      ? 'bg-accent/15 text-white font-semibold shadow-glow border border-accent/50'
-      : 'text-slate-400 hover:bg-glass-light hover:text-white hover:border-accent/20 border border-transparent'
-  } ${!isMobile && isCollapsed ? 'justify-center !px-2' : ''}`;
+  const navItemClass = (path: string, isMobile: boolean = false) => `flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group relative ${location.pathname.startsWith(path)
+    ? 'bg-accent/15 text-white font-semibold shadow-glow border border-accent/50'
+    : 'text-slate-400 hover:bg-glass-light hover:text-white hover:border-accent/20 border border-transparent'
+    } ${!isMobile && isCollapsed ? 'justify-center !px-2' : ''}`;
 
-  const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]);
+  const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]);
+  const isSystemAdmin = hasRole([UserRole.SYSTEM_ADMIN]);
+  const isFullAdmin = hasRole([UserRole.FULL_ADMIN]);
   const isClientUser = hasRole([UserRole.CLIENT_USER]);
 
   const appName = config.companyName || 'AutoPartPro';
@@ -87,11 +88,11 @@ export const Layout = () => {
           </div>
         </div>
       ) : (
-         <div className="p-2 z-10 text-center pb-4 mt-4">
-            <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mx-auto text-xs font-bold border border-accent/30 text-accent shadow-glow">
-              {user?.fullName.charAt(0)}
-            </div>
-         </div>
+        <div className="p-2 z-10 text-center pb-4 mt-4">
+          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mx-auto text-xs font-bold border border-accent/30 text-accent shadow-glow">
+            {user?.fullName.charAt(0)}
+          </div>
+        </div>
       )}
 
       <div className="p-4 flex-1 overflow-y-auto z-10 custom-scrollbar">
@@ -103,14 +104,14 @@ export const Layout = () => {
             {(isMobile || !isCollapsed) && <span>Tableau de bord</span>}
           </Link>
 
-          {/* SYSTEM ADMIN SPECIFIC */}
-          {hasRole([UserRole.SYSTEM_ADMIN]) && (
+          {/* SYSTEM ADMIN & AGENCY ADMIN */}
+          {(isSystemAdmin || isFullAdmin) && (
             <>
               {(isMobile || !isCollapsed) && <div className="pt-6 pb-2 px-4 text-[10px] font-bold text-neon-purple uppercase tracking-widest">Administration</div>}
               {!isMobile && isCollapsed && <div className="h-4"></div>}
               <Link to="/admin/clients" className={navItemClass('/admin/clients', isMobile)} title="Entreprises">
-                 <Icons.Team />
-                 {(isMobile || !isCollapsed) && <span>Entreprises</span>}
+                <Icons.Team />
+                {(isMobile || !isCollapsed) && <span>Entreprises</span>}
               </Link>
               <Link to="/admin/users" className={navItemClass('/admin/users', isMobile)} title="Utilisateurs">
                 <Icons.Users />
@@ -120,10 +121,13 @@ export const Layout = () => {
                 <Icons.News />
                 {(isMobile || !isCollapsed) && <span>Actualités</span>}
               </Link>
-              <Link to="/admin/config" className={navItemClass('/admin/config', isMobile)} title="Configuration">
-                <Icons.Config />
-                {(isMobile || !isCollapsed) && <span>Configuration</span>}
-              </Link>
+              {/* Configuration - SYSTEM_ADMIN only */}
+              {isSystemAdmin && (
+                <Link to="/admin/config" className={navItemClass('/admin/config', isMobile)} title="Configuration">
+                  <Icons.Config />
+                  {(isMobile || !isCollapsed) && <span>Configuration</span>}
+                </Link>
+              )}
               <Link to="/admin/audit" className={navItemClass('/admin/audit', isMobile)} title="Audit & Logs">
                 <Icons.Audit />
                 {(isMobile || !isCollapsed) && <span>Audit & Logs</span>}
@@ -155,12 +159,12 @@ export const Layout = () => {
           {/* CLIENT ADMIN ONLY */}
           {hasRole([UserRole.CLIENT_ADMIN]) && (
             <>
-            {(isMobile || !isCollapsed) && <div className="pt-6 pb-2 px-4 text-[10px] font-bold text-neon-green uppercase tracking-widest">Mon Compte</div>}
-            {!isMobile && isCollapsed && <div className="h-4"></div>}
-            <Link to="/team" className={navItemClass('/team', isMobile)} title="Mon Équipe">
-              <Icons.Users />
-              {(isMobile || !isCollapsed) && <span>Mon Équipe</span>}
-            </Link>
+              {(isMobile || !isCollapsed) && <div className="pt-6 pb-2 px-4 text-[10px] font-bold text-neon-green uppercase tracking-widest">Mon Compte</div>}
+              {!isMobile && isCollapsed && <div className="h-4"></div>}
+              <Link to="/team" className={navItemClass('/team', isMobile)} title="Mon Équipe">
+                <Icons.Users />
+                {(isMobile || !isCollapsed) && <span>Mon Équipe</span>}
+              </Link>
             </>
           )}
 
@@ -184,15 +188,15 @@ export const Layout = () => {
       </div>
 
       <div className="p-4 border-t border-accent/10 bg-brand-950/50 z-10">
-         {!isMobile && isCollapsed && (
-           <button onClick={() => setIsCollapsed(false)} className="mx-auto block text-slate-500 hover:text-accent mb-4 transition-colors">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
-           </button>
-         )}
-         <button onClick={logout} className={`logout-btn flex items-center space-x-2 px-4 py-3 w-full transition-all rounded-xl border-2 ${!isMobile && isCollapsed ? 'justify-center' : ''}`} title="Déconnexion">
-           <Icons.Logout />
-           {(isMobile || !isCollapsed) && <span className="text-sm font-bold">Déconnexion</span>}
-         </button>
+        {!isMobile && isCollapsed && (
+          <button onClick={() => setIsCollapsed(false)} className="mx-auto block text-slate-500 hover:text-accent mb-4 transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+          </button>
+        )}
+        <button onClick={logout} className={`logout-btn flex items-center space-x-2 px-4 py-3 w-full transition-all rounded-xl border-2 ${!isMobile && isCollapsed ? 'justify-center' : ''}`} title="Déconnexion">
+          <Icons.Logout />
+          {(isMobile || !isCollapsed) && <span className="text-sm font-bold">Déconnexion</span>}
+        </button>
       </div>
     </>
   );
@@ -268,7 +272,7 @@ export const Layout = () => {
             className={`text-slate-400 hover:text-accent transition-colors ${isCollapsed ? 'hidden' : 'ml-2'}`}
             title="Réduire le menu"
           >
-             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
           </button>
         </div>
 
@@ -307,56 +311,56 @@ export const Layout = () => {
 
           {/* CENTER: Branding OR Weather Widget - Dynamic width */}
           <div className="flex-1 flex items-center h-full overflow-hidden justify-center mx-2 lg:mx-4">
-             {/* Brand Logo Marquee - Only if configured - Takes full available space */}
-             {config.brandLogos && config.brandLogos.length > 0 ? (
-               <div className="hidden md:flex relative h-14 overflow-hidden items-center w-full">
-                  <div className="absolute inset-y-0 left-0 w-8 lg:w-16 bg-gradient-to-r from-brand-900/80 to-transparent z-10"></div>
-                  <div className="absolute inset-y-0 right-0 w-8 lg:w-16 bg-gradient-to-l from-brand-900/80 to-transparent z-10"></div>
+            {/* Brand Logo Marquee - Only if configured - Takes full available space */}
+            {config.brandLogos && config.brandLogos.length > 0 ? (
+              <div className="hidden md:flex relative h-14 overflow-hidden items-center w-full">
+                <div className="absolute inset-y-0 left-0 w-8 lg:w-16 bg-gradient-to-r from-brand-900/80 to-transparent z-10"></div>
+                <div className="absolute inset-y-0 right-0 w-8 lg:w-16 bg-gradient-to-l from-brand-900/80 to-transparent z-10"></div>
 
-                  <div className="flex animate-marquee whitespace-nowrap space-x-8 lg:space-x-16 items-center">
-                    {[...config.brandLogos, ...config.brandLogos, ...config.brandLogos, ...config.brandLogos].map((logo, idx) => (
-                      <img key={idx} src={logo} alt="Partner Logo" className="h-8 lg:h-10 w-auto object-contain transition-all duration-300 opacity-60 hover:opacity-100 brightness-150" />
-                    ))}
-                  </div>
-               </div>
-             ) : (
-                /* Fallback Widget: Date, Time & Weather */
-                <>
-                  {/* Desktop/Tablet version */}
-                  <div className="hidden md:flex items-center space-x-3 xl:space-x-6 text-slate-400 glass-light px-3 xl:px-6 py-2 xl:py-2.5 rounded-full border border-accent/20">
-                      {/* Date - Hidden until xl (1280px) */}
-                      <div className="hidden xl:block text-xs font-bold uppercase tracking-widest border-r border-accent/20 pr-6 text-slate-300">
-                        {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                      </div>
-
-                      {/* Real-time Clock */}
-                      <div className="flex items-center xl:border-r xl:border-accent/20 xl:pr-6">
-                        <svg className="w-4 h-4 mr-2 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-sm xl:text-lg font-mono font-bold text-white tabular-nums">
-                          {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        </span>
-                      </div>
-
-                      {/* Weather - Compact version between lg-xl, full version on xl+ */}
-                      {weather && (
-                        <div className="flex items-center text-sm font-medium">
-                          <span className="text-lg xl:text-xl mr-1 xl:mr-2">{weather.icon}</span>
-                          <span className="font-bold text-white">{weather.temp}°C</span>
-                          <span className="hidden xl:inline text-xs ml-2 text-slate-400">à {config.weatherLocation || 'Tunis'}</span>
-                        </div>
-                      )}
+                <div className="flex animate-marquee whitespace-nowrap space-x-8 lg:space-x-16 items-center">
+                  {[...config.brandLogos, ...config.brandLogos, ...config.brandLogos, ...config.brandLogos].map((logo, idx) => (
+                    <img key={idx} src={logo} alt="Partner Logo" className="h-8 lg:h-10 w-auto object-contain transition-all duration-300 opacity-60 hover:opacity-100 brightness-150" />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Fallback Widget: Date, Time & Weather */
+              <>
+                {/* Desktop/Tablet version */}
+                <div className="hidden md:flex items-center space-x-3 xl:space-x-6 text-slate-400 glass-light px-3 xl:px-6 py-2 xl:py-2.5 rounded-full border border-accent/20">
+                  {/* Date - Hidden until xl (1280px) */}
+                  <div className="hidden xl:block text-xs font-bold uppercase tracking-widest border-r border-accent/20 pr-6 text-slate-300">
+                    {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </div>
 
-                  {/* Mobile version - Just time */}
-                  <div className="flex md:hidden items-center text-accent">
-                    <span className="text-sm font-mono font-bold tabular-nums">
-                      {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  {/* Real-time Clock */}
+                  <div className="flex items-center xl:border-r xl:border-accent/20 xl:pr-6">
+                    <svg className="w-4 h-4 mr-2 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm xl:text-lg font-mono font-bold text-white tabular-nums">
+                      {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   </div>
-                </>
-             )}
+
+                  {/* Weather - Compact version between lg-xl, full version on xl+ */}
+                  {weather && (
+                    <div className="flex items-center text-sm font-medium">
+                      <span className="text-lg xl:text-xl mr-1 xl:mr-2">{weather.icon}</span>
+                      <span className="font-bold text-white">{weather.temp}°C</span>
+                      <span className="hidden xl:inline text-xs ml-2 text-slate-400">à {config.weatherLocation || 'Tunis'}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile version - Just time */}
+                <div className="flex md:hidden items-center text-accent">
+                  <span className="text-sm font-mono font-bold tabular-nums">
+                    {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* RIGHT: Actions */}
@@ -387,7 +391,7 @@ export const Layout = () => {
               >
                 <Icons.Bell />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-neon-pink ring-2 ring-brand-900 animate-pulse"></span>
+                  <span className="notification-indicator absolute top-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white shadow-md animate-pulse"></span>
                 )}
               </button>
 
@@ -409,15 +413,14 @@ export const Layout = () => {
                             className={`p-3 border-b border-accent/5 hover:bg-accent/10 transition-colors cursor-pointer ${!notif.isRead ? 'bg-accent/5' : ''}`}
                             onClick={() => markAsRead(notif.id)}
                           >
-                             <div className="flex justify-between items-start mb-1">
-                               <span className={`text-[10px] font-bold px-1.5 rounded ${
-                                 notif.type === 'NEW_ORDER' ? 'bg-neon-green/20 text-neon-green' :
-                                 notif.type === 'ORDER_STATUS' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-slate-700 text-slate-300'
-                               }`}>{notif.type === 'NEW_ORDER' ? 'Nouvelle commande' : notif.type === 'ORDER_STATUS' ? 'Commande' : 'Système'}</span>
-                               <span className="text-[10px] text-slate-500">{new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                             </div>
-                             <p className={`text-sm text-white ${!notif.isRead ? 'font-bold' : 'font-medium'}`}>{notif.title}</p>
-                             <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{notif.message}</p>
+                            <div className="flex justify-between items-start mb-1">
+                              <span className={`text-[10px] font-bold px-1.5 rounded ${notif.type === 'NEW_ORDER' ? 'bg-neon-green/20 text-neon-green' :
+                                notif.type === 'ORDER_STATUS' ? 'bg-neon-blue/20 text-neon-blue' : 'bg-slate-700 text-slate-300'
+                                }`}>{notif.type === 'NEW_ORDER' ? 'Nouvelle commande' : notif.type === 'ORDER_STATUS' ? 'Commande' : 'Système'}</span>
+                              <span className="text-[10px] text-slate-500">{new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className={`text-sm text-white ${!notif.isRead ? 'font-bold' : 'font-medium'}`}>{notif.title}</p>
+                            <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{notif.message}</p>
                           </div>
                         ))
                       )}
@@ -428,18 +431,18 @@ export const Layout = () => {
             </div>
 
             {/* Internal / Role Badges - Hidden on mobile */}
-             {isInternal ? (
-                <div className="hidden md:flex items-center space-x-2 glass-light px-3 py-1.5 rounded-full border border-neon-purple/30">
-                  <div className={`w-2 h-2 rounded-full ${hasRole([UserRole.SYSTEM_ADMIN]) ? 'bg-neon-purple animate-pulse' : 'bg-neon-blue'}`}></div>
-                  <span className={`text-xs font-bold uppercase tracking-wide ${hasRole([UserRole.SYSTEM_ADMIN]) ? 'text-neon-purple' : 'text-neon-blue'}`}>
-                    {hasRole([UserRole.SYSTEM_ADMIN]) ? 'Super Admin' : 'Admin Gestion'}
-                  </span>
-                </div>
-              ) : isClientUser ? (
-                 <div className="hidden md:block text-xs font-bold text-slate-400 glass-light px-3 py-1 rounded-full border border-slate-600">
-                    Consultation Seule
-                 </div>
-              ) : null}
+            {isInternal ? (
+              <div className="hidden md:flex items-center space-x-2 glass-light px-3 py-1.5 rounded-full border border-neon-purple/30">
+                <div className={`w-2 h-2 rounded-full ${isSystemAdmin ? 'bg-neon-purple animate-pulse' : isFullAdmin ? 'bg-neon-orange animate-pulse' : 'bg-neon-blue'}`}></div>
+                <span className={`text-xs font-bold uppercase tracking-wide ${isSystemAdmin ? 'text-neon-purple' : isFullAdmin ? 'text-neon-orange' : 'text-neon-blue'}`}>
+                  {isSystemAdmin ? 'Super Admin' : isFullAdmin ? 'Admin Complet' : 'Admin Gestion'}
+                </span>
+              </div>
+            ) : isClientUser ? (
+              <div className="hidden md:block text-xs font-bold text-slate-400 glass-light px-3 py-1 rounded-full border border-slate-600">
+                Consultation Seule
+              </div>
+            ) : null}
 
             {/* Cart Icon - Desktop only, hidden on mobile (available in mobile menu) */}
             {!isInternal && !isClientUser && (
@@ -462,7 +465,7 @@ export const Layout = () => {
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-8 bg-brand-950 bg-grid scroll-smooth pb-20 lg:pb-8">
-          <div className="max-w-7xl mx-auto animate-fadeIn">
+          <div className="max-w-[1800px] mx-auto animate-fadeIn">
             <Outlet />
           </div>
         </main>
@@ -472,9 +475,8 @@ export const Layout = () => {
           <div className="flex items-center justify-around h-16">
             <Link
               to={isInternal ? "/admin/dashboard" : "/dashboard"}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                location.pathname.includes('dashboard') ? 'text-accent' : 'text-slate-500'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${location.pathname.includes('dashboard') ? 'text-accent' : 'text-slate-500'
+                }`}
             >
               <Icons.Dashboard />
               <span className="text-[10px] mt-1 font-medium">Accueil</span>
@@ -482,9 +484,8 @@ export const Layout = () => {
 
             <Link
               to="/catalog"
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                location.pathname === '/catalog' ? 'text-accent' : 'text-slate-500'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${location.pathname === '/catalog' ? 'text-accent' : 'text-slate-500'
+                }`}
             >
               <Icons.Catalog />
               <span className="text-[10px] mt-1 font-medium">Catalogue</span>
@@ -493,9 +494,8 @@ export const Layout = () => {
             {!isInternal && !isClientUser && (
               <Link
                 to="/cart"
-                className={`flex flex-col items-center justify-center flex-1 h-full relative transition-colors ${
-                  location.pathname === '/cart' ? 'text-accent' : 'text-slate-500'
-                }`}
+                className={`flex flex-col items-center justify-center flex-1 h-full relative transition-colors ${location.pathname === '/cart' ? 'text-accent' : 'text-slate-500'
+                  }`}
               >
                 <div className="relative">
                   <Icons.Cart />
@@ -511,9 +511,8 @@ export const Layout = () => {
 
             <Link
               to={isInternal ? "/admin/orders" : "/orders"}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                location.pathname.includes('orders') ? 'text-accent' : 'text-slate-500'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${location.pathname.includes('orders') ? 'text-accent' : 'text-slate-500'
+                }`}
             >
               <Icons.Orders />
               <span className="text-[10px] mt-1 font-medium">Commandes</span>

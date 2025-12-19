@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../../services/api';
 import { User, UserRole } from '../../types';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -12,6 +13,8 @@ type SortConfig = { key: keyof User | 'companyName'; direction: 'asc' | 'desc'; 
 
 export const AdminUsers = () => {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const isFullAdmin = currentUser?.role === UserRole.FULL_ADMIN;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'fullName', direction: 'asc' });
@@ -85,7 +88,7 @@ export const AdminUsers = () => {
     if (user.company?.name) return user.company.name;
     if (user.companyName) return user.companyName;
     // For internal admins without company
-    if ([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN].includes(user.role)) {
+    if ([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN].includes(user.role)) {
       return 'MECACOMM HQ';
     }
     return '-';
@@ -93,11 +96,19 @@ export const AdminUsers = () => {
 
   // Helper to get role badge color
   const getRoleBadgeClass = (role: UserRole) => {
-    // Violet for internal admins (SYSTEM_ADMIN, PARTIAL_ADMIN)
-    if (role === UserRole.SYSTEM_ADMIN || role === UserRole.PARTIAL_ADMIN) {
+    // Violet for super admin
+    if (role === UserRole.SYSTEM_ADMIN) {
       return 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30';
     }
-    // Blue for client roles (CLIENT_ADMIN, CLIENT_USER)
+    // Orange for agency admin
+    if (role === UserRole.FULL_ADMIN) {
+      return 'bg-neon-orange/20 text-neon-orange border border-neon-orange/30';
+    }
+    // Blue for partial admin
+    if (role === UserRole.PARTIAL_ADMIN) {
+      return 'bg-neon-blue/20 text-neon-blue border border-neon-blue/30';
+    }
+    // Cyan for client roles (CLIENT_ADMIN, CLIENT_USER)
     return 'bg-accent/20 text-accent border border-accent/30';
   };
 
@@ -202,7 +213,7 @@ export const AdminUsers = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const isInternal = [UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN].includes(formData.role);
+    const isInternal = [UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN].includes(formData.role);
 
     if (editingUser) {
       // Update - don't send password if empty
@@ -231,7 +242,7 @@ export const AdminUsers = () => {
   };
 
   const handleRoleChange = (role: UserRole) => {
-    const isInternal = [UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN].includes(role);
+    const isInternal = [UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN].includes(role);
     setFormData(prev => ({
       ...prev,
       role,
@@ -240,7 +251,7 @@ export const AdminUsers = () => {
   };
 
   const getUserStatus = (id: string) => users?.find(u => u.id === id)?.isActive;
-  const isInternalRole = [UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN].includes(formData.role);
+  const isInternalRole = [UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN].includes(formData.role);
 
   // Dynamic table height
   const tableHeight = 'calc(100vh - 290px)';
@@ -320,7 +331,8 @@ export const AdminUsers = () => {
                     className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 rounded px-1 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
                   >
                     <option value="">Tous</option>
-                    <option value={UserRole.SYSTEM_ADMIN}>SYSTEM_ADMIN</option>
+                    {!isFullAdmin && <option value={UserRole.SYSTEM_ADMIN}>SYSTEM_ADMIN</option>}
+                    <option value={UserRole.FULL_ADMIN}>FULL_ADMIN</option>
                     <option value={UserRole.PARTIAL_ADMIN}>PARTIAL_ADMIN</option>
                     <option value={UserRole.CLIENT_ADMIN}>CLIENT_ADMIN</option>
                     <option value={UserRole.CLIENT_USER}>CLIENT_USER</option>
@@ -532,9 +544,10 @@ export const AdminUsers = () => {
                   onChange={e => handleRoleChange(e.target.value as UserRole)}
                 >
                   <option value={UserRole.CLIENT_USER}>Client User (Lecture seule)</option>
-                  <option value={UserRole.CLIENT_ADMIN}>Client Admin (Gestion équipe)</option>
+                  <option value={UserRole.CLIENT_ADMIN}>Client Admin (Responsable compte)</option>
                   <option value={UserRole.PARTIAL_ADMIN}>Admin Partiel (Commandes)</option>
-                  <option value={UserRole.SYSTEM_ADMIN}>Super Admin (Tout)</option>
+                  <option value={UserRole.FULL_ADMIN}>Admin Complet (Gestion globale)</option>
+                  {!isFullAdmin && <option value={UserRole.SYSTEM_ADMIN}>Super Admin (Tout)</option>}
                 </select>
               </div>
 

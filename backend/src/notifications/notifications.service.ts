@@ -43,9 +43,9 @@ export class NotificationsService {
     relatedEntityType?: string,
     relatedEntityId?: string,
   ): Promise<Notification[]> {
-    // Trouver tous les admins (SYSTEM_ADMIN et PARTIAL_ADMIN)
+    // Trouver tous les admins (SYSTEM_ADMIN, FULL_ADMIN et PARTIAL_ADMIN)
     const admins = await this.userRepository.find({
-      where: { role: In([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]) },
+      where: { role: In([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]) },
     });
 
     const notifications: Notification[] = [];

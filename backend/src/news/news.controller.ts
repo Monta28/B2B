@@ -33,13 +33,13 @@ export class NewsController {
   }
 
   @Post()
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async create(@Body() createNewsDto: CreateNewsDto, @Request() req) {
     return this.newsService.create(createNewsDto, req.user.id);
   }
 
   @Put(':id')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async update(
     @Param('id') id: string,
     @Body() updateNewsDto: UpdateNewsDto,
@@ -49,7 +49,7 @@ export class NewsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SYSTEM_ADMIN)
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
   async remove(@Param('id') id: string, @Request() req) {
     return this.newsService.remove(id, req.user.id);
   }

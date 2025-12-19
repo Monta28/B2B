@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ENUMs
 -- =============================================
 DO $$ BEGIN
-    CREATE TYPE user_role AS ENUM ('SYSTEM_ADMIN', 'PARTIAL_ADMIN', 'CLIENT_ADMIN', 'CLIENT_USER');
+    CREATE TYPE user_role AS ENUM ('SYSTEM_ADMIN', 'FULL_ADMIN', 'PARTIAL_ADMIN', 'CLIENT_ADMIN', 'CLIENT_USER');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

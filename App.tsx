@@ -76,34 +76,34 @@ const AppRoutes = () => {
       
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={
-          hasRole([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]) 
-            ? <Navigate to="/admin/dashboard" replace /> 
+          hasRole([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN])
+            ? <Navigate to="/admin/dashboard" replace />
             : <Navigate to="/dashboard" replace />
         } />
 
         {/* --- COMMON ROUTES --- */}
-        <Route path="dashboard" element={hasRole([UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]) ? <AdminDashboard /> : <Dashboard />} />
-        <Route path="admin/dashboard" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]}><AdminDashboard /></RoleRoute>} />
-        
+        <Route path="dashboard" element={hasRole([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]) ? <AdminDashboard /> : <Dashboard />} />
+        <Route path="admin/dashboard" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]}><AdminDashboard /></RoleRoute>} />
+
         {/* --- CATALOG & DOCUMENTS (ALL ROLES) --- */}
-        <Route path="catalog" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER, UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]}><Catalog /></RoleRoute>} />
-        <Route path="documents" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER, UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]}><Documents /></RoleRoute>} />
-        
+        <Route path="catalog" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER, UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]}><Catalog /></RoleRoute>} />
+        <Route path="documents" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER, UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]}><Documents /></RoleRoute>} />
+
         {/* --- CLIENT SPECIFIC ROUTES --- */}
         <Route path="cart" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER]}><Cart /></RoleRoute>} />
         <Route path="team" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN]}><ClientTeam /></RoleRoute>} />
         <Route path="quick-order" element={<RoleRoute allowedRoles={[UserRole.CLIENT_ADMIN]}><QuickOrder /></RoleRoute>} />
 
         {/* --- INTERNAL ADMIN ROUTES --- */}
-        <Route path="admin/clients" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN]}><Clients /></RoleRoute>} />
-        <Route path="admin/users" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN]}><AdminUsers /></RoleRoute>} />
+        <Route path="admin/clients" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN]}><Clients /></RoleRoute>} />
+        <Route path="admin/users" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN]}><AdminUsers /></RoleRoute>} />
         <Route path="admin/config" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN]}><AdminConfig /></RoleRoute>} />
-        <Route path="admin/news" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN]}><AdminNews /></RoleRoute>} />
-        <Route path="admin/audit" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN]}><AdminAudit /></RoleRoute>} />
-        
+        <Route path="admin/news" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN]}><AdminNews /></RoleRoute>} />
+        <Route path="admin/audit" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN]}><AdminAudit /></RoleRoute>} />
+
         {/* Orders is shared but view logic differs inside */}
         <Route path="orders" element={<Orders />} />
-        <Route path="admin/orders" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.PARTIAL_ADMIN]}><Orders /></RoleRoute>} />
+        <Route path="admin/orders" element={<RoleRoute allowedRoles={[UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]}><Orders /></RoleRoute>} />
       
       </Route>
     </Routes>

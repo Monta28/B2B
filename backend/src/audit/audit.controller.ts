@@ -12,7 +12,7 @@ import { UserRole } from '../entities/user.entity';
 
 @Controller('audit')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles(UserRole.SYSTEM_ADMIN)
+@Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
 export class AuditController {
   constructor(private auditService: AuditService) {}
 

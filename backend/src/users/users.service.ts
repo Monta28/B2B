@@ -25,6 +25,12 @@ export class UsersService {
 
     if (currentUser.role === UserRole.CLIENT_ADMIN) {
       queryBuilder.where('user.companyId = :companyId', { companyId: currentUser.companyId });
+    } else if (currentUser.role === UserRole.FULL_ADMIN) {
+      // FULL_ADMIN cannot see SYSTEM_ADMIN users
+      queryBuilder.where('user.role != :systemAdminRole', { systemAdminRole: UserRole.SYSTEM_ADMIN });
+      if (companyId) {
+        queryBuilder.andWhere('user.companyId = :companyId', { companyId });
+      }
     } else if (companyId) {
       queryBuilder.where('user.companyId = :companyId', { companyId });
     }

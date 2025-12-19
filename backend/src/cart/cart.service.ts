@@ -40,11 +40,12 @@ export class CartService {
     if (existingItem) {
       // Update quantity
       existingItem.quantity += addItemDto.quantity;
-      existingItem.lineTotal = existingItem.quantity * existingItem.unitPrice * (1 - (existingItem.discountPercent || 0) / 100);
+      // Arrondir à 2 décimales pour éviter les erreurs de précision
+      existingItem.lineTotal = Math.round(existingItem.quantity * existingItem.unitPrice * (1 - (existingItem.discountPercent || 0) / 100) * 100) / 100;
       await this.cartItemRepository.save(existingItem);
     } else {
-      // Add new item
-      const lineTotal = addItemDto.quantity * addItemDto.unitPrice * (1 - (addItemDto.discountPercent || 0) / 100);
+      // Add new item - Arrondir à 2 décimales
+      const lineTotal = Math.round(addItemDto.quantity * addItemDto.unitPrice * (1 - (addItemDto.discountPercent || 0) / 100) * 100) / 100;
       const newItem = this.cartItemRepository.create({
         cartId: cart.id,
         productRef: addItemDto.productRef,
@@ -72,7 +73,8 @@ export class CartService {
     }
 
     item.quantity = updateItemDto.quantity;
-    item.lineTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100);
+    // Arrondir à 2 décimales pour éviter les erreurs de précision
+    item.lineTotal = Math.round(item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100) * 100) / 100;
     await this.cartItemRepository.save(item);
 
     // Update cart total
@@ -114,7 +116,8 @@ export class CartService {
     });
 
     if (cart) {
-      cart.totalHt = cart.items.reduce((sum, item) => sum + item.lineTotal, 0);
+      // Arrondir à 2 décimales pour éviter les erreurs de précision
+      cart.totalHt = Math.round(cart.items.reduce((sum, item) => sum + item.lineTotal, 0) * 100) / 100;
       await this.cartRepository.save(cart);
     }
   }

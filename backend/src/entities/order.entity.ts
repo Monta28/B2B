@@ -73,6 +73,18 @@ export class Order {
   @Column({ name: 'dms_ref', length: 100, nullable: true })
   dmsRef: string;
 
+  @Column({ name: 'bl_number', length: 100, nullable: true })
+  blNumber: string;
+
+  @Column({ name: 'bl_date', type: 'timestamp with time zone', nullable: true })
+  blDate: Date;
+
+  @Column({ name: 'invoice_number', length: 100, nullable: true })
+  invoiceNumber: string;
+
+  @Column({ name: 'invoice_date', type: 'timestamp with time zone', nullable: true })
+  invoiceDate: Date;
+
   @Column({ name: 'last_modified_at', type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
   lastModifiedAt: Date;
 

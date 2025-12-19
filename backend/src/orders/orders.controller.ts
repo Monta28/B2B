@@ -13,7 +13,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { RolesGuard } from '../auth/roles.guard';
-import { Order } from '../entities/order.entity';
+import { Roles } from '../auth/roles.decorator';
+import { Order, OrderStatus } from '../entities/order.entity';
+import { UserRole } from '../entities/user.entity';
 import { DmsMappingService } from '../dms-mapping/dms-mapping.service';
 
 // Durée maximale d'édition avant expiration automatique (1 minute)
@@ -36,6 +38,10 @@ function transformOrder(order: Order) {
     orderNumber: order.orderNumber || null,
     orderType: order.orderType,
     dmsRef: order.dmsRef || null,
+    blNumber: order.blNumber || null,
+    blDate: order.blDate?.toISOString() || null,
+    invoiceNumber: order.invoiceNumber || null,
+    invoiceDate: order.invoiceDate?.toISOString() || null,
     isEditing,
     editingByUserId: isEditing ? order.editingByUserId : null,
     editingByUser: isEditing && order.editingByUser ? {
@@ -149,5 +155,20 @@ export class OrdersController {
   async cleanupEditingLocks() {
     const count = await this.ordersService.cleanupExpiredEditingLocks();
     return { cleanedUp: count };
+  }
+
+  // Synchroniser les commandes avec le DMS pour détecter les BL et factures
+  @Post('sync-dms')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN)
+  async syncFromDms() {
+    const result = await this.ordersService.syncOrdersFromDms();
+    return {
+      success: result.errors.length === 0,
+      synced: result.synced,
+      errors: result.errors,
+      message: result.synced > 0
+        ? `${result.synced} commande(s) synchronisée(s) avec le DMS`
+        : 'Aucune nouvelle synchronisation détectée',
+    };
   }
 }
