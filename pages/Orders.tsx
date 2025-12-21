@@ -195,7 +195,8 @@ export const Orders = () => {
       if (editingOrderIdRef.current) {
         try {
           // Utiliser fetch avec keepalive pour tenter d'envoyer même pendant fermeture
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4001'}/api/orders/${editingOrderIdRef.current}/editing`, {
+          const backendUrl = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:4001`;
+          await fetch(`${backendUrl}/api/orders/${editingOrderIdRef.current}/editing`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',

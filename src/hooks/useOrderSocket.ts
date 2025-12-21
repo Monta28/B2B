@@ -31,7 +31,9 @@ export function useOrderSocket(options: UseOrderSocketOptions = {}) {
   useEffect(() => {
     if (!user) return;
 
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+    // Use VITE_API_URL if set, otherwise auto-detect based on current hostname
+    const backendUrl = import.meta.env.VITE_API_URL ||
+      `${window.location.protocol}//${window.location.hostname}:4001`;
     const socket = io(`${backendUrl}/orders`, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
