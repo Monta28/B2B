@@ -8,7 +8,7 @@ import { UserRole, Document } from '../types';
 import { useConfig } from '../context/ConfigContext';
 import { generateDocumentPdf, DocumentPdfData } from '../services/pdf-generator';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 type DocTab = 'INVOICE' | 'BL';
 type SortConfig = { key: keyof Document | 'companyName'; direction: 'asc' | 'desc'; };

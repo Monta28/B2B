@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { NewsItem, NewsType } from '../../types';
 import { ConfirmModal } from '../../components/ConfirmModal';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 type SortConfig = { key: keyof NewsItem; direction: 'asc' | 'desc'; };
 

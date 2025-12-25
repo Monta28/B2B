@@ -28,7 +28,7 @@ interface EditConflictState {
   newQty: number;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 type SortConfig = { key: keyof Order | 'dmsRef'; direction: 'asc' | 'desc'; };
 type OrderTab = 'ACTIVE' | 'HISTORY';
@@ -921,6 +921,22 @@ export const Orders = () => {
         setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredAndSortedOrders.length));
       }
     }
+  }, [displayCount, filteredAndSortedOrders.length]);
+
+  // Auto-load more if container doesn't overflow
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    const checkAndLoadMore = () => {
+      const { scrollHeight, clientHeight } = container;
+      if (scrollHeight <= clientHeight && displayCount < filteredAndSortedOrders.length) {
+        setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredAndSortedOrders.length));
+      }
+    };
+
+    const timer = setTimeout(checkAndLoadMore, 100);
+    return () => clearTimeout(timer);
   }, [displayCount, filteredAndSortedOrders.length]);
 
   const handleSort = (key: keyof Order) => setSortConfig(current => ({

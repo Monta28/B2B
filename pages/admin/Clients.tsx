@@ -6,7 +6,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { Company } from '../../types';
 
 // Number of items to load at a time for infinite scroll
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 type SortConfig = { key: keyof Company | 'users'; direction: 'asc' | 'desc'; };
 
@@ -273,6 +273,24 @@ export const Clients = () => {
         setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredCompanies.length));
       }
     }
+  }, [displayCount, filteredCompanies.length]);
+
+  // Auto-load more if container doesn't overflow (content too short to scroll)
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    const checkAndLoadMore = () => {
+      const { scrollHeight, clientHeight } = container;
+      // If content doesn't overflow and there are more items, load them
+      if (scrollHeight <= clientHeight && displayCount < filteredCompanies.length) {
+        setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredCompanies.length));
+      }
+    };
+
+    // Check after render
+    const timer = setTimeout(checkAndLoadMore, 100);
+    return () => clearTimeout(timer);
   }, [displayCount, filteredCompanies.length]);
 
   // Multi-select handlers for company table

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 type AuditLog = { id: string; timestamp: string; userEmail: string; action: string; details: string; ip?: string; };
 type SortConfig = { key: keyof AuditLog; direction: 'asc' | 'desc'; };

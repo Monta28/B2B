@@ -8,7 +8,7 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { useAuth } from '../../context/AuthContext';
 import { useConfig } from '../../context/ConfigContext';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 type SortConfig = { key: keyof User | 'companyName'; direction: 'asc' | 'desc'; };
 
