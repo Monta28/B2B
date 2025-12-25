@@ -474,8 +474,7 @@ export const AdminConfig = () => {
     try {
       const columns = await api.admin.getDmsTableColumns(tableName);
       setTableColumns(columns);
-    } catch (error) {
-      console.error('Error loading columns:', error);
+    } catch {
       setTableColumns([]);
     } finally {
       setLoadingColumns(false);
@@ -489,8 +488,7 @@ export const AdminConfig = () => {
     try {
       const data = await api.admin.previewDmsData(selectedTable, columnMappings);
       setPreviewData(data);
-    } catch (error) {
-      console.error('Error loading preview:', error);
+    } catch {
       setPreviewData([]);
     } finally {
       setLoadingPreview(false);

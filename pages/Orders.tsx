@@ -177,9 +177,8 @@ export const Orders = () => {
   // Mutation pour verrouiller/déverrouiller la commande en édition
   const setEditingMutation = useMutation({
     mutationFn: ({ id, isEditing }: { id: string; isEditing: boolean }) => api.setOrderEditing(id, isEditing),
-    onError: (error: any) => {
+    onError: () => {
       toast.error('Erreur lors du verrouillage de la commande');
-      console.error('Error setting editing status:', error);
     },
   });
 
@@ -208,7 +207,7 @@ export const Orders = () => {
             keepalive: true,
           });
         } catch (e) {
-          console.log('[Orders] Could not release editing lock on unload');
+          // Ignore errors when releasing editing lock
         }
       }
     };
@@ -648,21 +647,18 @@ export const Orders = () => {
   // Fonction de sync silencieuse (pas de toast sauf si données synchronisées)
   const performAutoSync = useCallback(async () => {
     try {
-      console.log('[Orders] Running automatic DMS sync...');
       const result = await api.admin.syncDmsOrders();
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       if (result.synced > 0) {
         toast.success(`${result.synced} commande(s) synchronisée(s) avec le DMS`);
       }
     } catch (error: any) {
-      console.error('[Orders] Auto sync error:', error);
+      // Silently ignore auto-sync errors
     }
   }, [queryClient]);
 
   // Synchronisation automatique DMS basée sur l'intervalle configuré
   useEffect(() => {
-    console.log('[Orders] Config received:', { dmsSyncInterval: config.dmsSyncInterval, isInternal });
-
     // Nettoyer l'intervalle existant
     if (syncIntervalRef.current) {
       clearInterval(syncIntervalRef.current);
@@ -670,17 +666,14 @@ export const Orders = () => {
     }
 
     if (!isInternal) {
-      console.log('[Orders] Auto sync disabled: not internal user');
       return;
     }
     const intervalMinutes = config.dmsSyncInterval || 0;
     if (intervalMinutes <= 0) {
-      console.log('[Orders] Auto sync disabled: interval is 0 or undefined');
       return;
     }
 
     const intervalMs = intervalMinutes * 60 * 1000;
-    console.log(`[Orders] Auto DMS sync enabled: every ${intervalMinutes} minute(s) (${intervalMs}ms)`);
 
     // Sync au montage avec délai de 2s
     const initTimeout = setTimeout(() => {
@@ -698,7 +691,6 @@ export const Orders = () => {
         clearInterval(syncIntervalRef.current);
         syncIntervalRef.current = null;
       }
-      console.log('[Orders] Cleaning up DMS sync interval');
     };
   }, [isInternal, config.dmsSyncInterval, performAutoSync]);
 
@@ -713,9 +705,7 @@ export const Orders = () => {
     let positionsMap: Record<string, string> = {};
     try {
       positionsMap = await api.getOrderPositions(orderId);
-      console.log('[Orders] Positions loaded:', positionsMap);
     } catch (err) {
-      console.warn('[Orders] Could not load positions:', err);
       // Continue without positions
     }
 

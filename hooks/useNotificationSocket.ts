@@ -25,22 +25,17 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[NotificationSocket] Connected');
       setIsConnected(true);
-
-      // Register with user info
       socket.emit('register', {
         userId: user.id,
       });
     });
 
     socket.on('disconnect', () => {
-      console.log('[NotificationSocket] Disconnected');
       setIsConnected(false);
     });
 
     socket.on('newNotification', (notification: Notification) => {
-      console.log('[NotificationSocket] New notification:', notification);
       options.onNewNotification?.(notification);
     });
 

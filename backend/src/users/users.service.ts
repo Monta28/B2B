@@ -119,15 +119,7 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto, currentUserId: string): Promise<User> {
-    console.log('=== UPDATE USER DEBUG ===');
-    console.log('User ID:', id);
-    console.log('UpdateUserDto:', JSON.stringify(updateUserDto, null, 2));
-    console.log('companyId value:', updateUserDto.companyId);
-    console.log('companyId type:', typeof updateUserDto.companyId);
-    console.log('companyId !== undefined:', updateUserDto.companyId !== undefined);
-
     const user = await this.findOne(id);
-    console.log('Current user companyId:', user.companyId);
 
     if (updateUserDto.email && updateUserDto.email !== user.email) {
       const existingUser = await this.userRepository.findOne({

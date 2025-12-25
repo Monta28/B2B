@@ -61,7 +61,6 @@ export const ConfigProvider = ({ children }: React.PropsWithChildren) => {
     try {
       await api.updateAppConfig(patch);
     } catch (err) {
-      console.error('Config update failed:', err);
       throw err;
     }
     const refreshed = await api.getAppConfig();
@@ -79,9 +78,7 @@ export const ConfigProvider = ({ children }: React.PropsWithChildren) => {
       return `${(refreshed as any)[key] ?? ''}` !== `${(patch as any)[key] ?? ''}`;
     });
     if (hasThemeMismatch) {
-      const err = new Error("Les couleurs/branding n'ont pas été enregistrés (base non migrée ou backend non redémarré).");
-      console.error(err.message, { sent: patch, received: refreshed });
-      throw err;
+      throw new Error("Les couleurs/branding n'ont pas été enregistrés (base non migrée ou backend non redémarré).");
     }
 
     return refreshed;

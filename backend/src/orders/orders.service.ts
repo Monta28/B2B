@@ -71,15 +71,6 @@ export class OrdersService {
       throw new NotFoundException('Commande non trouvée');
     }
 
-    // Debug: Vérifier les valeurs TVA lues de la base
-    if (order.items) {
-      console.log('[DEBUG Backend findOne] Items lus de la DB:', JSON.stringify(order.items.map(i => ({
-        ref: i.productRef,
-        tvaRate: i.tvaRate,
-        typeof: typeof i.tvaRate
-      }))));
-    }
-
     // Check access for client users
     if (
       [UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER].includes(currentUser.role) &&
@@ -92,8 +83,6 @@ export class OrdersService {
   }
 
   async create(createOrderDto: CreateOrderDto, currentUser: any): Promise<Order> {
-    console.log('[OrdersService] Creating new order for user:', currentUser.email, 'company:', currentUser.companyId);
-
     const company = await this.companyRepository.findOne({
       where: { id: currentUser.companyId },
     });
@@ -101,21 +90,18 @@ export class OrdersService {
     if (!company) {
       throw new NotFoundException('Entreprise non trouvée');
     }
-    console.log('[OrdersService] Company found:', company.name);
 
     // Generate order number
     const orderNumber = await this.generateOrderNumber();
 
     // Calculate totals
     let totalHt = 0;
-    console.log('[DEBUG Backend] Items reçus:', JSON.stringify(createOrderDto.items.map(i => ({ ref: i.productRef, tvaRate: i.tvaRate }))));
     const items = createOrderDto.items.map((item) => {
       // Arrondir à 2 décimales pour éviter les erreurs de précision
       const lineTotal = Math.round(item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100) * 100) / 100;
       totalHt += lineTotal;
 
       const tvaRateValue = item.tvaRate ?? 7;
-      console.log(`[DEBUG Backend] ${item.productRef}: item.tvaRate=${item.tvaRate}, tvaRateValue=${tvaRateValue}`);
       return this.orderItemRepository.create({
         productRef: item.productRef,
         productName: item.productName,
@@ -144,9 +130,6 @@ export class OrdersService {
     // Sauvegarder l'ordre d'abord
     const savedOrder = await this.orderRepository.save(order);
 
-    // Debug: Vérifier les items AVANT save
-    console.log('[DEBUG Backend] Items AVANT save séparé:', JSON.stringify(items.map(i => ({ ref: i.productRef, tvaRate: i.tvaRate, typeof: typeof i.tvaRate }))));
-
     // Assigner l'orderId à chaque item et sauvegarder séparément
     const itemsWithOrderId = items.map(item => {
       item.orderId = savedOrder.id;
@@ -154,17 +137,7 @@ export class OrdersService {
     });
 
     // Sauvegarder les items séparément avec leurs valeurs tvaRate
-    const savedItems = await this.orderItemRepository.save(itemsWithOrderId);
-
-    // Debug: Vérifier ce qui a été sauvegardé
-    console.log('[DEBUG Backend] Items sauvegardés:', JSON.stringify(savedItems.map(i => ({ ref: i.productRef, tvaRate: i.tvaRate }))));
-
-    // Debug: Vérifier directement dans la DB avec une requête SQL
-    const dbItems = await this.orderItemRepository.query(
-      'SELECT product_ref, tva_rate FROM order_items WHERE order_id = $1',
-      [savedOrder.id]
-    );
-    console.log('[DEBUG Backend] Items dans DB (SQL brut):', JSON.stringify(dbItems));
+    await this.orderItemRepository.save(itemsWithOrderId);
 
     // Audit log
     await this.logAuditAction(currentUser.id, 'CREATE_ORDER', 'Order', savedOrder.id, {
@@ -186,8 +159,6 @@ export class OrdersService {
         where: { role: In([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]) },
       });
 
-      console.log(`[OrdersService] Found ${admins.length} admins to notify:`, admins.map(a => ({ id: a.id, email: a.email, role: a.role })));
-
       // Formater le montant de manière sécurisée
       const totalAmount = Number(order.totalHt) || 0;
       const formattedAmount = totalAmount.toFixed(2);
@@ -203,15 +174,12 @@ export class OrdersService {
           relatedEntityId: order.id,
         });
         const savedNotification = await this.notificationRepository.save(notification);
-        console.log(`[OrdersService] Notification saved for admin ${admin.email}:`, savedNotification.id);
 
         // Envoyer via WebSocket en temps réel
         this.notificationsGateway.sendNotificationToUser(admin.id, savedNotification);
       }
-
-      console.log(`[OrdersService] Notified ${admins.length} admins about new order ${order.orderNumber}`);
     } catch (error) {
-      console.error('[OrdersService] Error notifying admins:', error);
+      // Silently ignore notification errors
     }
   }
 
@@ -312,16 +280,12 @@ export class OrdersService {
     // Si le statut passe à VALIDATED, exporter vers le DMS AVANT de confirmer le changement de statut
     const oldStatus = order.status;
     if (updateStatusDto.status === OrderStatus.VALIDATED && oldStatus !== OrderStatus.VALIDATED) {
-      console.log(`[OrdersService] Order ${order.orderNumber} being validated, exporting to DMS first...`);
-
       const dmsResult = await this.exportOrderToDms(order.id);
 
       if (!dmsResult.success) {
-        console.error(`[OrdersService] DMS export failed: ${dmsResult.error}`);
         throw new BadRequestException(`Échec du transfert vers le DMS : ${dmsResult.error}. La commande n'a pas été validée.`);
       }
 
-      console.log(`[OrdersService] DMS export successful, ref: ${dmsResult.dmsRef}`);
       // L'export DMS met déjà à jour dmsRef dans la base, on met à jour notre instance
       order.dmsRef = dmsResult.dmsRef;
     }
@@ -399,9 +363,8 @@ export class OrdersService {
         this.notificationsGateway.sendNotificationToUser(user.id, savedNotification);
       }
 
-      console.log(`[OrdersService] Notified ${companyUsers.length} users about status change for order ${order.orderNumber}`);
     } catch (error) {
-      console.error('[OrdersService] Error notifying clients:', error);
+      // Silently ignore notification errors
     }
   }
 
@@ -501,8 +464,6 @@ export class OrdersService {
       return 0;
     }
 
-    console.log(`[OrdersService] Cleaning up ${expiredOrders.length} expired editing locks`);
-
     // Libérer les verrous expirés
     for (const order of expiredOrders) {
       order.isEditing = false;
@@ -522,8 +483,6 @@ export class OrdersService {
 
   // Exporter une commande vers le DMS SQL Server
   async exportOrderToDms(orderId: string): Promise<{ success: boolean; dmsRef?: string; error?: string }> {
-    console.log(`[OrdersService] Starting DMS export for order ${orderId}`);
-
     try {
       // Charger la commande avec ses items et la company
       const order = await this.orderRepository.findOne({
@@ -541,7 +500,6 @@ export class OrdersService {
 
       // Vérifier que la company a un code client DMS
       if (!order.company.dmsClientCode) {
-        console.warn(`[OrdersService] Company ${order.company.name} has no DMS client code`);
         return { success: false, error: `L'entreprise ${order.company.name} n'a pas de code client DMS configuré` };
       }
 
@@ -553,8 +511,6 @@ export class OrdersService {
         return { success: false, error: 'Mapping DMS non configuré pour les commandes' };
       }
 
-      console.log(`[OrdersService] Using mappings - Header table: ${headerMapping.tableName}, Detail table: ${detailMapping.tableName}`);
-
       // Connexion SQL Server
       const pool = await this.appConfigService.getSqlConnection();
       if (!pool) {
@@ -564,7 +520,6 @@ export class OrdersService {
       try {
         // Générer un numéro de commande DMS unique
         const dmsOrderNumber = await this.generateDmsOrderNumber(pool, headerMapping.tableName, headerMapping.columns.numCommande);
-        console.log(`[OrdersService] Generated DMS order number: ${dmsOrderNumber}`);
 
         // Calculer le total TTC et TVA
         let totalTTC = 0;
@@ -613,8 +568,6 @@ export class OrdersService {
 
         if (headerColumns.length > 0) {
           const headerInsertQuery = `INSERT INTO [${headerMapping.tableName}] (${headerColumns.join(', ')}) VALUES (${headerParams.join(', ')})`;
-          console.log(`[OrdersService] Header INSERT query: ${headerInsertQuery}`);
-          console.log(`[OrdersService] Header values:`, headerValues.map((v, i) => `${headerColumns[i]}=${v} (${typeof v})`));
 
           // Champs qui doivent rester en string (codes avec zéros en tête)
         const stringFields = ['codeClient', 'codeArticle', 'numCommande', 'designation', 'adresseLivraison', 'status', 'orderType', 'devise'];
@@ -647,7 +600,6 @@ export class OrdersService {
           });
 
           await headerRequest.query(headerInsertQuery);
-          console.log(`[OrdersService] Header inserted successfully`);
         }
 
         // 2. Insérer les lignes de détail
@@ -728,13 +680,9 @@ export class OrdersService {
           }
         }
 
-        console.log(`[OrdersService] ${order.items.length} detail lines inserted successfully`);
-
         // 3. Mettre à jour la référence DMS dans la commande locale
         order.dmsRef = dmsOrderNumber;
         await this.orderRepository.save(order);
-
-        console.log(`[OrdersService] Order ${order.orderNumber} exported to DMS with ref ${dmsOrderNumber}`);
 
         return { success: true, dmsRef: dmsOrderNumber };
 
@@ -743,14 +691,12 @@ export class OrdersService {
       }
 
     } catch (error: any) {
-      console.error(`[OrdersService] DMS export error:`, error);
       return { success: false, error: error.message || 'Erreur lors de l\'export vers le DMS' };
     }
   }
 
   // Synchroniser les commandes avec le DMS pour détecter les BL et factures
   async syncOrdersFromDms(): Promise<{ synced: number; errors: string[] }> {
-    console.log('[OrdersService] Starting DMS sync for BL and invoices...');
     const errors: string[] = [];
     let synced = 0;
 
@@ -783,8 +729,6 @@ export class OrdersService {
           ],
         });
 
-        console.log(`[OrdersService] Found ${ordersToCheck.length} orders to check for BL/invoices`);
-
         for (const order of ordersToCheck) {
           if (!order.dmsRef) continue; // Pas de ref DMS, on ne peut pas chercher
 
@@ -814,7 +758,6 @@ export class OrdersService {
                   await this.notifyClientStatusChange(order, oldStatus, OrderStatus.SHIPPED, true);
                 }
 
-                console.log(`[OrdersService] Order ${order.orderNumber} has BL: ${order.blNumber}`);
                 synced++;
               }
             }
@@ -844,7 +787,6 @@ export class OrdersService {
                   await this.notifyClientStatusChange(order, oldStatus, OrderStatus.INVOICED, true);
                 }
 
-                console.log(`[OrdersService] Order ${order.orderNumber} has invoice: ${order.invoiceNumber}`);
                 synced++;
               }
             }
@@ -854,19 +796,15 @@ export class OrdersService {
             await this.orderRepository.save(order);
 
           } catch (orderError: any) {
-            console.error(`[OrdersService] Error syncing order ${order.orderNumber}:`, orderError);
             errors.push(`Erreur pour commande ${order.orderNumber}: ${orderError.message}`);
           }
         }
-
-        console.log(`[OrdersService] DMS sync completed: ${synced} orders synced`);
 
       } finally {
         await pool.close();
       }
 
     } catch (error: any) {
-      console.error('[OrdersService] DMS sync error:', error);
       errors.push(error.message || 'Erreur lors de la synchronisation DMS');
     }
 
@@ -922,7 +860,6 @@ export class OrdersService {
 
       if (result.recordset.length > 0 && result.recordset[0].lastNum) {
         const lastNum = String(result.recordset[0].lastNum);
-        console.log(`[OrdersService] Found last order number: ${lastNum}`);
         // Extraire la séquence (3 derniers chiffres)
         const sequence = parseInt(lastNum.slice(-3), 10);
         if (!isNaN(sequence) && sequence < 999) {
@@ -943,7 +880,6 @@ export class OrdersService {
       `);
 
       if (existsCheck.recordset[0].cnt > 0) {
-        console.warn(`[OrdersService] Order number ${newOrderNumber} already exists, generating alternative`);
         // Trouver le prochain numéro disponible
         for (let i = 1; i <= 999; i++) {
           const candidate = `${prefix}${String(i).padStart(3, '0')}`;
@@ -957,11 +893,9 @@ export class OrdersService {
         }
       }
 
-      console.log(`[OrdersService] Generated unique DMS order number: ${newOrderNumber}`);
       return newOrderNumber;
 
     } catch (error) {
-      console.error('[OrdersService] Error generating DMS order number:', error);
       // Fallback: utiliser un numéro basé sur timestamp plus court (compatible avec les colonnes numériques)
       const ts = Date.now();
       const shortTs = ts % 1000000000; // Garder les 9 derniers chiffres

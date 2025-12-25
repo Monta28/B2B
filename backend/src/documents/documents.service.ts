@@ -100,8 +100,7 @@ export class DocumentsService {
         totalTTC: parseFloat(row.totalTTC) || 0,
         observation: row.observation || '',
       }));
-    } catch (error) {
-      console.error('Error fetching invoices:', error);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -162,8 +161,7 @@ export class DocumentsService {
         observation: row.observation || '',
         numFacture: row.numFacture ? String(row.numFacture) : undefined,
       }));
-    } catch (error) {
-      console.error('Error fetching delivery notes:', error);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -189,20 +187,14 @@ export class DocumentsService {
 
   // Get invoice detail lines
   async getInvoiceLines(numFacture: string): Promise<DocumentLine[]> {
-    console.log('[DocumentsService] ========== getInvoiceLines START ==========');
-    console.log('[DocumentsService] getInvoiceLines called with numFacture:', numFacture);
-
     const mapping = await this.dmsMappingService.getMappingConfig('factures_detail');
-    console.log('[DocumentsService] factures_detail mapping:', JSON.stringify(mapping, null, 2));
 
     if (!mapping) {
-      console.log('[DocumentsService] No mapping found for factures_detail');
       return [];
     }
 
     const pool = await this.appConfigService.getSqlConnection();
     if (!pool) {
-      console.log('[DocumentsService] No SQL connection available');
       return [];
     }
 
@@ -213,10 +205,8 @@ export class DocumentsService {
         .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @tableName`);
 
       const actualColumns = new Set(colsResult.recordset.map((r: any) => r.COLUMN_NAME));
-      console.log(`[DocumentsService] Actual columns in ${mapping.tableName}:`, Array.from(actualColumns));
 
       if (actualColumns.size === 0) {
-        console.log(`[DocumentsService] ERROR: Table '${mapping.tableName}' does NOT exist or has no columns!`);
         await pool.close();
         return [];
       }
@@ -225,8 +215,6 @@ export class DocumentsService {
 
       // Check if numFacture column is mapped and exists (required)
       if (!columns.numFacture || !actualColumns.has(columns.numFacture)) {
-        console.log('[DocumentsService] ERROR: numFacture column not mapped or does not exist!');
-        console.log(`[DocumentsService] Mapped to: ${columns.numFacture}, exists: ${actualColumns.has(columns.numFacture)}`);
         await pool.close();
         return [];
       }
@@ -242,7 +230,6 @@ export class DocumentsService {
           selectClauses.push(`[${columns[mappedName]}] as ${alias}`);
           validColumns[mappedName] = true;
         } else if (columns[mappedName]) {
-          console.log(`[DocumentsService] Column ${mappedName} mapped to '${columns[mappedName]}' but does NOT exist in table - will be calculated`);
           validColumns[mappedName] = false;
         }
       };
@@ -261,7 +248,6 @@ export class DocumentsService {
 
       // Must have at least some columns to select (besides numFacture for filtering)
       if (selectClauses.length === 0) {
-        console.log('[DocumentsService] No valid columns mapped, returning empty');
         await pool.close();
         return [];
       }
@@ -277,13 +263,10 @@ export class DocumentsService {
       }
 
       const query = `SELECT ${selectClauses.join(', ')} FROM [${mapping.tableName}] WHERE [${columns.numFacture}] = @numFacture ${orderByClause}`;
-      console.log('[DocumentsService] Executing query:', query);
 
       const result = await pool.request()
         .input('numFacture', sql.NVarChar, numFacture)
         .query(query);
-
-      console.log('[DocumentsService] Result count:', result.recordset.length);
 
       // Map results and calculate missing fields
       let lines: DocumentLine[] = result.recordset.map((row: any, index: number) => {
@@ -335,17 +318,13 @@ export class DocumentsService {
       // If numBL/dateBL not available in factures_detail, try to get BL info from bl_entete
       const hasAnyBLInfo = lines.some(l => l.numBL);
       if (!hasAnyBLInfo) {
-        console.log('[DocumentsService] No BL info in factures_detail, trying to get from bl_entete...');
         // Note: pool connection is still open, will be closed after enrichment
         lines = await this.enrichLinesWithBLInfo(numFacture, lines);
       }
 
       await pool.close();
       return lines;
-    } catch (error: any) {
-      console.error('[DocumentsService] ========== ERROR fetching invoice lines ==========');
-      console.error('[DocumentsService] Error message:', error?.message);
-      console.error('[DocumentsService] Full error:', error);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -355,21 +334,18 @@ export class DocumentsService {
   private async enrichLinesWithBLInfo(numFacture: string, lines: DocumentLine[]): Promise<DocumentLine[]> {
     const pool = await this.appConfigService.getSqlConnection();
     if (!pool) {
-      console.log('[DocumentsService] No SQL connection for BL enrichment');
       return lines;
     }
 
     try {
       const blMapping = await this.dmsMappingService.getMappingConfig('bl_entete');
       if (!blMapping) {
-        console.log('[DocumentsService] No bl_entete mapping available');
         await pool.close();
         return lines;
       }
 
       const blColumns = blMapping.columns;
       if (!blColumns.numFacture || !blColumns.numBL) {
-        console.log('[DocumentsService] bl_entete mapping missing numFacture or numBL column');
         await pool.close();
         return lines;
       }
@@ -382,7 +358,6 @@ export class DocumentsService {
       const actualColumns = new Set(colsResult.recordset.map((r: any) => r.COLUMN_NAME));
 
       if (!actualColumns.has(blColumns.numFacture) || !actualColumns.has(blColumns.numBL)) {
-        console.log('[DocumentsService] bl_entete table missing required columns');
         await pool.close();
         return lines;
       }
@@ -394,14 +369,12 @@ export class DocumentsService {
       }
 
       const blQuery = `SELECT ${selectParts.join(', ')} FROM [${blMapping.tableName}] WHERE [${blColumns.numFacture}] = @numFacture ORDER BY [${blColumns.numBL}]`;
-      console.log('[DocumentsService] BL enrichment query:', blQuery);
 
       const blResult = await pool.request()
         .input('numFacture', sql.NVarChar, numFacture)
         .query(blQuery);
 
       const linkedBLs = blResult.recordset;
-      console.log('[DocumentsService] Found linked BLs:', linkedBLs.length);
 
       if (linkedBLs.length === 0) {
         await pool.close();
@@ -423,7 +396,6 @@ export class DocumentsService {
       // If multiple BLs, try to match via bl_detail
       const blDetailMapping = await this.dmsMappingService.getMappingConfig('bl_detail');
       if (!blDetailMapping) {
-        console.log('[DocumentsService] No bl_detail mapping, assigning first BL to all lines');
         const bl = linkedBLs[0];
         const dateBL = bl.dateBL ? this.formatDate(bl.dateBL) : undefined;
         await pool.close();
@@ -436,7 +408,6 @@ export class DocumentsService {
 
       const blDetailColumns = blDetailMapping.columns;
       if (!blDetailColumns.numBL || !blDetailColumns.codeArticle) {
-        console.log('[DocumentsService] bl_detail mapping missing numBL or codeArticle column');
         await pool.close();
         return lines;
       }
@@ -449,7 +420,6 @@ export class DocumentsService {
       const detailActualColumns = new Set(detailColsResult.recordset.map((r: any) => r.COLUMN_NAME));
 
       if (!detailActualColumns.has(blDetailColumns.numBL) || !detailActualColumns.has(blDetailColumns.codeArticle)) {
-        console.log('[DocumentsService] bl_detail table missing required columns');
         await pool.close();
         return lines;
       }
@@ -474,8 +444,6 @@ export class DocumentsService {
         }
       }
 
-      console.log('[DocumentsService] Article to BL map size:', articleToBLMap.size);
-
       await pool.close();
 
       // Assign BL info to lines based on codeArticle match
@@ -491,8 +459,7 @@ export class DocumentsService {
         return line;
       });
 
-    } catch (error: any) {
-      console.error('[DocumentsService] Error enriching lines with BL info:', error?.message);
+    } catch {
       if (pool) await pool.close();
       return lines;
     }
@@ -500,12 +467,8 @@ export class DocumentsService {
 
   // Get delivery note detail lines
   async getDeliveryNoteLines(numBL: string): Promise<DocumentLine[]> {
-    console.log('[DocumentsService] ========== getDeliveryNoteLines START ==========');
-    console.log('[DocumentsService] getDeliveryNoteLines called with numBL:', numBL);
-
     const mapping = await this.dmsMappingService.getMappingConfig('bl_detail');
     if (!mapping) {
-      console.log('[DocumentsService] No mapping found for bl_detail');
       return [];
     }
 
@@ -519,10 +482,8 @@ export class DocumentsService {
         .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @tableName`);
 
       const actualColumns = new Set(colsResult.recordset.map((r: any) => r.COLUMN_NAME));
-      console.log(`[DocumentsService] Actual columns in ${mapping.tableName}:`, Array.from(actualColumns));
 
       if (actualColumns.size === 0) {
-        console.log(`[DocumentsService] ERROR: Table '${mapping.tableName}' does NOT exist or has no columns!`);
         await pool.close();
         return [];
       }
@@ -531,7 +492,6 @@ export class DocumentsService {
 
       // Check if numBL column is mapped and exists (required)
       if (!columns.numBL || !actualColumns.has(columns.numBL)) {
-        console.log('[DocumentsService] ERROR: numBL column not mapped or does not exist!');
         await pool.close();
         return [];
       }
@@ -546,7 +506,6 @@ export class DocumentsService {
           selectClauses.push(`[${columns[mappedName]}] as ${alias}`);
           validColumns[mappedName] = true;
         } else if (columns[mappedName]) {
-          console.log(`[DocumentsService] Column ${mappedName} mapped to '${columns[mappedName]}' but does NOT exist in table - will be calculated`);
           validColumns[mappedName] = false;
         }
       };
@@ -562,7 +521,6 @@ export class DocumentsService {
       addColumnIfExists('montantTTC', 'montantTTC');
 
       if (selectClauses.length === 0) {
-        console.log('[DocumentsService] No valid columns mapped, returning empty');
         await pool.close();
         return [];
       }
@@ -571,13 +529,11 @@ export class DocumentsService {
       const orderByClause = validColumns.numLigne ? `ORDER BY [${columns.numLigne}]` : '';
 
       const query = `SELECT ${selectClauses.join(', ')} FROM [${mapping.tableName}] WHERE [${columns.numBL}] = @numBL ${orderByClause}`;
-      console.log('[DocumentsService] Executing query:', query);
 
       const result = await pool.request()
         .input('numBL', sql.NVarChar, numBL)
         .query(query);
 
-      console.log('[DocumentsService] Result count:', result.recordset.length);
       await pool.close();
 
       // Map results and calculate missing fields
@@ -618,9 +574,7 @@ export class DocumentsService {
           montantTTC,
         };
       });
-    } catch (error: any) {
-      console.error('[DocumentsService] ========== ERROR fetching BL lines ==========');
-      console.error('[DocumentsService] Error message:', error?.message);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -679,8 +633,7 @@ export class DocumentsService {
         totalTTC: parseFloat(row.totalTTC) || 0,
         observation: row.observation || '',
       };
-    } catch (error) {
-      console.error('Error fetching invoice header:', error);
+    } catch {
       if (pool) await pool.close();
       return null;
     }
@@ -694,12 +647,10 @@ export class DocumentsService {
 
     // Verify client code if provided (security check)
     if (dmsClientCode && invoice.codeClient !== dmsClientCode) {
-      console.log(`[DocumentsService] Client code mismatch: expected ${dmsClientCode}, got ${invoice.codeClient}`);
       return null;
     }
 
     const lines = await this.getInvoiceLines(numFacture);
-    console.log(`[DocumentsService] getInvoiceWithLines: Found ${lines.length} lines for invoice ${numFacture}`);
     return { ...invoice, lines };
   }
 
@@ -754,8 +705,7 @@ export class DocumentsService {
         totalTTC: parseFloat(row.totalTTC) || 0,
         observation: row.observation || '',
       };
-    } catch (error) {
-      console.error('Error fetching delivery note header:', error);
+    } catch {
       if (pool) await pool.close();
       return null;
     }
@@ -769,12 +719,10 @@ export class DocumentsService {
 
     // Verify client code if provided (security check)
     if (dmsClientCode && bl.codeClient !== dmsClientCode) {
-      console.log(`[DocumentsService] Client code mismatch for BL: expected ${dmsClientCode}, got ${bl.codeClient}`);
       return null;
     }
 
     const lines = await this.getDeliveryNoteLines(numBL);
-    console.log(`[DocumentsService] getDeliveryNoteWithLines: Found ${lines.length} lines for BL ${numBL}`);
     return { ...bl, lines };
   }
 
@@ -784,7 +732,6 @@ export class DocumentsService {
 
     const mapping = await this.dmsMappingService.getMappingConfig('clients');
     if (!mapping) {
-      console.log('[DocumentsService] No clients mapping found');
       return null;
     }
 
@@ -795,7 +742,6 @@ export class DocumentsService {
       const columns = mapping.columns;
 
       if (!columns.codeClient || !columns.raisonSociale) {
-        console.log('[DocumentsService] clients mapping missing codeClient or raisonSociale column');
         await pool.close();
         return null;
       }
@@ -808,13 +754,11 @@ export class DocumentsService {
       const actualColumns = new Set(colsResult.recordset.map((r: any) => r.COLUMN_NAME));
 
       if (!actualColumns.has(columns.codeClient) || !actualColumns.has(columns.raisonSociale)) {
-        console.log('[DocumentsService] clients table missing required columns');
         await pool.close();
         return null;
       }
 
       const query = `SELECT TOP 1 [${columns.raisonSociale}] as raisonSociale FROM [${mapping.tableName}] WHERE [${columns.codeClient}] = @codeClient`;
-      console.log('[DocumentsService] getClientName query:', query, 'codeClient:', codeClient);
 
       const result = await pool.request()
         .input('codeClient', sql.NVarChar, codeClient)
@@ -823,15 +767,12 @@ export class DocumentsService {
       await pool.close();
 
       if (result.recordset.length === 0) {
-        console.log('[DocumentsService] No client found for codeClient:', codeClient);
         return null;
       }
 
       const raisonSociale = result.recordset[0].raisonSociale;
-      console.log('[DocumentsService] Found raisonSociale:', raisonSociale);
       return raisonSociale || null;
-    } catch (error: any) {
-      console.error('[DocumentsService] Error fetching client name:', error?.message);
+    } catch {
       if (pool) await pool.close();
       return null;
     }

@@ -47,15 +47,13 @@ export const NotificationProvider = ({ children }: React.PropsWithChildren) => {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       setNotifications(data);
-    } catch (e) {
-      console.error("Failed to fetch notifications");
+    } catch {
+      // Silently ignore notification fetch errors
     }
   };
 
   // Handle new notification from WebSocket
   const handleNewNotification = useCallback((notification: Notification) => {
-    console.log('[NotificationContext] New notification received:', notification);
-
     // Add to list (at the beginning)
     setNotifications(prev => {
       // Avoid duplicates
@@ -121,7 +119,6 @@ export const NotificationProvider = ({ children }: React.PropsWithChildren) => {
       `${window.location.protocol}//${window.location.hostname}:4001`;
     // Remove /api suffix for WebSocket connections (Socket.io uses root path)
     backendUrl = backendUrl.replace(/\/api\/?$/, '');
-    console.log('[NotificationContext] Connecting to WebSocket at:', backendUrl);
     const socket = io(`${backendUrl}/notifications`, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
@@ -130,20 +127,15 @@ export const NotificationProvider = ({ children }: React.PropsWithChildren) => {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[NotificationContext] WebSocket connected, socket id:', socket.id);
       setIsConnected(true);
-
-      // Register with user info
-      console.log('[NotificationContext] Registering user:', user.id, 'role:', user.role);
       socket.emit('register', { userId: user.id });
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('[NotificationContext] WebSocket connection error:', error);
+    socket.on('connect_error', () => {
+      // Silently ignore WebSocket connection errors
     });
 
     socket.on('disconnect', () => {
-      console.log('[NotificationContext] WebSocket disconnected');
       setIsConnected(false);
     });
 

@@ -29,16 +29,14 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
   private socketToUser: Map<string, string> = new Map(); // socketId -> userId
 
   afterInit(server: Server) {
-    console.log('[NotificationsGateway] WebSocket Gateway initialized');
     this.server = server;
   }
 
-  handleConnection(client: Socket) {
-    console.log(`[NotificationsGateway] Client connected: ${client.id}`);
+  handleConnection(_client: Socket) {
+    // Client connected
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`[NotificationsGateway] Client disconnected: ${client.id}`);
 
     // Remove from tracking
     const userId = this.socketToUser.get(client.id);
@@ -59,8 +57,6 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { userId: string },
   ) {
-    console.log(`[NotificationsGateway] User registered: ${data.userId}`);
-
     // Track user connection
     this.socketToUser.set(client.id, data.userId);
 
@@ -77,11 +73,7 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
 
   // Envoyer une notification à un utilisateur spécifique
   sendNotificationToUser(userId: string, notification: Notification) {
-    const isConnected = this.isUserConnected(userId);
-    console.log(`[NotificationsGateway] Sending notification to user ${userId} (connected: ${isConnected}):`, notification.title);
-
     if (!this.server) {
-      console.error('[NotificationsGateway] Server not initialized!');
       return;
     }
 
@@ -96,8 +88,6 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
       createdAt: notification.createdAt,
       isRead: notification.isRead,
     });
-
-    console.log(`[NotificationsGateway] Notification emitted to room user:${userId}`);
   }
 
   // Envoyer une notification à plusieurs utilisateurs
@@ -109,7 +99,6 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
 
   // Broadcast à tous les utilisateurs connectés
   broadcastNotification(notification: Notification) {
-    console.log(`[NotificationsGateway] Broadcasting notification:`, notification.title);
     this.server.emit('newNotification', {
       id: notification.id,
       type: notification.type,

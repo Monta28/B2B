@@ -41,10 +41,7 @@ export function useOrderSocket(options: UseOrderSocketOptions = {}) {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[OrderSocket] Connected');
       setIsConnected(true);
-
-      // Register with user info
       socket.emit('register', {
         userId: user.id,
         role: user.role,
@@ -52,13 +49,10 @@ export function useOrderSocket(options: UseOrderSocketOptions = {}) {
     });
 
     socket.on('disconnect', () => {
-      console.log('[OrderSocket] Disconnected');
       setIsConnected(false);
     });
 
     socket.on('orderEditingStatusChanged', (status: OrderEditingStatus) => {
-      console.log('[OrderSocket] Editing status changed:', status);
-
       setEditingStatuses(prev => {
         const newMap = new Map(prev);
         if (status.isEditing) {
@@ -73,7 +67,6 @@ export function useOrderSocket(options: UseOrderSocketOptions = {}) {
     });
 
     socket.on('orderUpdated', (update: OrderUpdateEvent) => {
-      console.log('[OrderSocket] Order updated:', update);
       options.onOrderUpdated?.(update);
     });
 

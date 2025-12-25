@@ -91,8 +91,8 @@ export class OrdersController {
   @Get()
   async findAll(@Request() req) {
     // Nettoyer les verrous expirés à chaque requête (background, non-bloquant)
-    this.ordersService.cleanupExpiredEditingLocks().catch(err => {
-      console.error('[OrdersController] Error cleaning up expired locks:', err);
+    this.ordersService.cleanupExpiredEditingLocks().catch(() => {
+      // Silently ignore cleanup errors
     });
 
     const orders = await this.ordersService.findAll(req.user);

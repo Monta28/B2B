@@ -198,12 +198,10 @@ export const api = {
   submitOrder: async (items: any[], userEmail: string, companyName: string, orderType: string) => {
     // Transform items to backend format with availability
     // Note: unitPrice is already the net price (after discount), so discountPercent should be 0
-    console.log('[DEBUG submitOrder] Items reçus:', JSON.stringify(items.map(i => ({ ref: i.reference, tvaRate: i.tvaRate, tauxTVA: i.tauxTVA, tva: i.tva })), null, 2));
     const orderItems = items.map((item: any) => {
       // Récupérer le taux TVA avec conversion robuste
       const rawTva = item.tvaRate ?? item.tauxTVA ?? item.tva ?? item.codeTva;
       const tvaRate = rawTva != null ? (typeof rawTva === 'string' ? parseFloat(rawTva) : Number(rawTva)) : 7;
-      console.log(`[DEBUG submitOrder] ${item.reference}: rawTva=${rawTva}, tvaRate=${tvaRate}`);
       return {
         productRef: item.reference,
         productName: item.designation,
@@ -214,7 +212,6 @@ export const api = {
         tvaRate: Number.isFinite(tvaRate) ? tvaRate : 7, // Taux TVA avec fallback
       };
     });
-    console.log('[DEBUG submitOrder] OrderItems à envoyer:', JSON.stringify(orderItems.map(i => ({ ref: i.productRef, tvaRate: i.tvaRate })), null, 2));
 
     const order = await fetchApi<any>('/orders', {
       method: 'POST',
@@ -348,7 +345,6 @@ export const api = {
   // Config
   getAppConfig: async () => {
     const config = await fetchApi<any>('/config/app');
-    console.log('[API] getAppConfig - dmsSyncInterval from backend:', config.dmsSyncInterval);
     return {
       currencySymbol: config.currencySymbol ?? 'TND',
       decimalPlaces: config.decimalPlaces ?? 3,

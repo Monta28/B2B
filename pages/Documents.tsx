@@ -211,10 +211,6 @@ export const Documents = () => {
         documentDetail = await api.getDeliveryNoteDetail(doc.dmsRef);
       }
 
-      console.log('[Documents] Document detail from API:', JSON.stringify(documentDetail, null, 2));
-      console.log('[Documents] Lines count:', documentDetail?.lines?.length);
-      console.log('[Documents] Lines array:', documentDetail?.lines);
-
       if (!documentDetail) {
         toast.error('Document non trouvé');
         return;
@@ -275,8 +271,7 @@ export const Documents = () => {
         },
       });
       toast.success(summaryOnly ? 'Récapitulatif téléchargé' : 'Document téléchargé avec succès');
-    } catch (error) {
-      console.error('Error downloading document:', error);
+    } catch {
       toast.error('Erreur lors du téléchargement');
     } finally {
       setDownloadingId(null);
@@ -328,8 +323,7 @@ export const Documents = () => {
       };
 
       setPreviewDoc(detail);
-    } catch (error) {
-      console.error('Error loading document preview:', error);
+    } catch {
       toast.error('Erreur lors du chargement');
     } finally {
       setLoadingPreview(null);

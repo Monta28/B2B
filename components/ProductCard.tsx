@@ -29,8 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           setLoadingPrice(false);
         }
       })
-      .catch(err => {
-        console.error(err);
+      .catch(() => {
         if(mounted) setLoadingPrice(false);
       });
     return () => { mounted = false; };

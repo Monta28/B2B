@@ -203,10 +203,6 @@ export class DmsMappingService {
         tva: 'TVA',
         positions: 'Positions',
       };
-      console.log(`[DmsMappingService] No mapping found for ${mappingType}, using defaults:`, {
-        tableName: defaultTableNames[mappingType],
-        columns: DEFAULT_MAPPINGS[mappingType],
-      });
       return {
         tableName: defaultTableNames[mappingType] || mappingType,
         columns: DEFAULT_MAPPINGS[mappingType] || {},
@@ -219,10 +215,8 @@ export class DmsMappingService {
         columns: JSON.parse(mapping.columnMappings),
         filter: mapping.filterClause || undefined,
       };
-      console.log(`[DmsMappingService] Found mapping for ${mappingType}:`, config);
       return config;
     } catch (e) {
-      console.error(`[DmsMappingService] Error parsing mapping for ${mappingType}:`, e);
       return null;
     }
   }
@@ -297,8 +291,7 @@ export class DmsMappingService {
 
       await pool.close();
       return result.recordset.map((row: any) => row.TABLE_NAME);
-    } catch (error) {
-      console.error('Error fetching DMS tables:', error);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -333,8 +326,7 @@ export class DmsMappingService {
         maxLength: row.maxLength,
         isNullable: row.isNullable === 1,
       }));
-    } catch (error) {
-      console.error('Error fetching table columns:', error);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -368,7 +360,6 @@ export class DmsMappingService {
       const mappedEntries = Object.entries(columnMappings).filter(([, dmsColumn]) => dmsColumn && dmsColumn.trim() !== '');
 
       if (mappedEntries.length === 0) {
-        console.log('[DmsMappingService] No columns mapped for preview');
         await pool.close();
         return [];
       }
@@ -378,7 +369,6 @@ export class DmsMappingService {
         .join(', ');
 
       const query = `SELECT TOP ${limit} ${selectClauses} FROM [${tableName}]`;
-      console.log('[DmsMappingService] Preview query:', query);
 
       const result = await pool.request().query(query);
       await pool.close();
@@ -413,8 +403,7 @@ export class DmsMappingService {
 
         return processedRow;
       });
-    } catch (error) {
-      console.error('Error previewing data:', error);
+    } catch {
       if (pool) await pool.close();
       return [];
     }
@@ -432,12 +421,10 @@ export class DmsMappingService {
     const positionsMapping = await this.getMappingConfig('positions');
 
     if (!articlesMapping) {
-      console.log('[DmsMappingService] No articles mapping configured');
       return {};
     }
 
     if (!positionsMapping) {
-      console.log('[DmsMappingService] No positions mapping configured');
       return {};
     }
 
@@ -470,11 +457,6 @@ export class DmsMappingService {
         WHERE a.[${articleCodeCol}] IN (${placeholders})
       `;
 
-      console.log('[DmsMappingService] Fetching positions with JOIN:', {
-        articlesTable: articlesMapping.tableName,
-        positionsTable: positionsMapping.tableName,
-        articleCodes,
-      });
       const result = await request.query(query);
       await pool.close();
 
@@ -486,10 +468,8 @@ export class DmsMappingService {
         }
       }
 
-      console.log('[DmsMappingService] Positions found:', positionsMap);
       return positionsMap;
     } catch (error) {
-      console.error('[DmsMappingService] Error fetching positions:', error);
       if (pool) await pool.close();
       return {};
     }

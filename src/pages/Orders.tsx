@@ -103,24 +103,19 @@ export const Orders = () => {
   // Fonction de sync silencieuse (pas de toast sauf si données synchronisées)
   const performAutoSync = useCallback(async () => {
     try {
-      console.log('[Orders] Running automatic DMS sync...');
       const result = await api.admin.syncDmsOrders();
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       if (result.synced > 0) {
         toast.success(`${result.synced} commande(s) synchronisée(s) avec le DMS`);
       }
       lastSyncRef.current = Date.now();
-    } catch (error: any) {
-      console.error('[Orders] Auto sync error:', error);
+    } catch {
       // Pas de toast pour les erreurs auto (évite le spam)
     }
   }, [queryClient]);
 
   // Synchronisation automatique DMS basée sur l'intervalle configuré
   useEffect(() => {
-    // Debug: afficher la config reçue
-    console.log('[Orders] Config received:', { dmsSyncInterval: config.dmsSyncInterval, isInternal, fullConfig: config });
-
     // Nettoyer l'intervalle existant
     if (syncIntervalRef.current) {
       clearInterval(syncIntervalRef.current);
@@ -128,17 +123,14 @@ export const Orders = () => {
     }
 
     if (!isInternal) {
-      console.log('[Orders] Auto sync disabled: not internal user');
       return;
     }
     const intervalMinutes = config.dmsSyncInterval || 0;
     if (intervalMinutes <= 0) {
-      console.log('[Orders] Auto sync disabled: interval is 0 or undefined');
       return;
     }
 
     const intervalMs = intervalMinutes * 60 * 1000;
-    console.log(`[Orders] Auto DMS sync enabled: every ${intervalMinutes} minute(s) (${intervalMs}ms)`);
 
     // Sync au montage si l'intervalle est configuré (avec délai de 2s)
     const initTimeout = setTimeout(() => {
@@ -156,7 +148,6 @@ export const Orders = () => {
         clearInterval(syncIntervalRef.current);
         syncIntervalRef.current = null;
       }
-      console.log('[Orders] Cleaning up DMS sync interval');
     };
   }, [isInternal, config.dmsSyncInterval, performAutoSync]);
 

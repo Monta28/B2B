@@ -43,11 +43,10 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private socketToUser: Map<string, string> = new Map(); // socketId -> userId
 
   handleConnection(client: Socket) {
-    console.log(`[OrdersGateway] Client connected: ${client.id}`);
+    // Client connected
   }
 
   async handleDisconnect(client: Socket) {
-    console.log(`[OrdersGateway] Client disconnected: ${client.id}`);
 
     // Remove from tracking
     const userId = this.socketToUser.get(client.id);
@@ -77,8 +76,6 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       if (lockedOrders.length > 0) {
-        console.log(`[OrdersGateway] Releasing ${lockedOrders.length} editing locks for disconnected user ${userId}`);
-
         for (const order of lockedOrders) {
           order.isEditing = false;
           order.editingByUserId = null;
@@ -93,7 +90,7 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
     } catch (error) {
-      console.error('[OrdersGateway] Error releasing editing locks:', error);
+      // Silently ignore errors when releasing editing locks
     }
   }
 
@@ -102,8 +99,6 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { userId: string; role: string },
   ) {
-    console.log(`[OrdersGateway] User registered: ${data.userId}, role: ${data.role}`);
-
     // Track user connection
     this.socketToUser.set(client.id, data.userId);
 
@@ -115,7 +110,6 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Join role-based room
     if (data.role === 'ADMIN' || data.role === 'SUPER_ADMIN') {
       client.join('admins');
-      console.log(`[OrdersGateway] User ${data.userId} joined admins room`);
     } else {
       client.join('clients');
     }
@@ -129,7 +123,6 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { orderId: string },
   ) {
     client.join(`order:${data.orderId}`);
-    console.log(`[OrdersGateway] Client ${client.id} subscribed to order:${data.orderId}`);
     return { status: 'subscribed', orderId: data.orderId };
   }
 
@@ -139,13 +132,11 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { orderId: string },
   ) {
     client.leave(`order:${data.orderId}`);
-    console.log(`[OrdersGateway] Client ${client.id} unsubscribed from order:${data.orderId}`);
     return { status: 'unsubscribed', orderId: data.orderId };
   }
 
   // Notify all admins about order editing status change
   notifyOrderEditingStatus(status: OrderEditingStatus) {
-    console.log(`[OrdersGateway] Broadcasting order editing status:`, status);
 
     // Notify all admins
     this.server.to('admins').emit('orderEditingStatusChanged', status);
@@ -156,8 +147,6 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // Notify about order updates (validation, status change, etc.)
   notifyOrderUpdated(orderId: string, update: any) {
-    console.log(`[OrdersGateway] Broadcasting order update for ${orderId}:`, update);
-
     // Notify admins
     this.server.to('admins').emit('orderUpdated', { orderId, ...update });
 
