@@ -32,12 +32,12 @@ export class Order {
   @JoinColumn({ name: 'company_id' })
   company: Company;
 
-  @Column({ name: 'created_by_user_id' })
-  createdByUserId: string;
+  @Column({ name: 'created_by_user_id', nullable: true })
+  createdByUserId: string | null;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by_user_id' })
-  createdByUser: User;
+  createdByUser: User | null;
 
   @Column({ name: 'order_type', type: 'enum', enum: OrderType, enumName: 'order_type', default: OrderType.STOCK })
   orderType: OrderType;
@@ -54,9 +54,9 @@ export class Order {
   @Column({ name: 'editing_by_user_id', nullable: true })
   editingByUserId: string;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'editing_by_user_id' })
-  editingByUser: User;
+  editingByUser: User | null;
 
   @Column({ name: 'editing_started_at', type: 'timestamp with time zone', nullable: true })
   editingStartedAt: Date;
