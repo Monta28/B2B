@@ -116,9 +116,11 @@ export const NotificationProvider = ({ children }: React.PropsWithChildren) => {
       return;
     }
 
-    // Use VITE_API_URL if set, otherwise auto-detect based on current hostname
-    const backendUrl = import.meta.env.VITE_API_URL ||
+    // Use VITE_API_URL if set (removing /api suffix for WebSocket), otherwise auto-detect
+    let backendUrl = import.meta.env.VITE_API_URL ||
       `${window.location.protocol}//${window.location.hostname}:4001`;
+    // Remove /api suffix for WebSocket connections (Socket.io uses root path)
+    backendUrl = backendUrl.replace(/\/api\/?$/, '');
     console.log('[NotificationContext] Connecting to WebSocket at:', backendUrl);
     const socket = io(`${backendUrl}/notifications`, {
       withCredentials: true,
