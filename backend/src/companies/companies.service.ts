@@ -62,7 +62,7 @@ export class CompaniesService {
     });
   }
 
-  async create(createCompanyDto: CreateCompanyDto, currentUserId: string): Promise<Company> {
+  async create(createCompanyDto: CreateCompanyDto, currentUserId: string, ipAddress?: string): Promise<Company> {
     // Check if DMS code already exists
     const existingCompany = await this.findByDmsCode(createCompanyDto.dmsClientCode);
 
@@ -77,12 +77,12 @@ export class CompaniesService {
     await this.logAuditAction(currentUserId, 'CREATE_COMPANY', 'Company', savedCompany.id, {
       name: savedCompany.name,
       dmsClientCode: savedCompany.dmsClientCode,
-    });
+    }, ipAddress);
 
     return savedCompany;
   }
 
-  async update(id: string, updateCompanyDto: UpdateCompanyDto, currentUserId: string): Promise<Company> {
+  async update(id: string, updateCompanyDto: UpdateCompanyDto, currentUserId: string, ipAddress?: string): Promise<Company> {
     const company = await this.findOne(id);
 
     // Check DMS code conflict
@@ -98,12 +98,12 @@ export class CompaniesService {
     const savedCompany = await this.companyRepository.save(company);
 
     // Audit log
-    await this.logAuditAction(currentUserId, 'UPDATE_COMPANY', 'Company', savedCompany.id, updateCompanyDto);
+    await this.logAuditAction(currentUserId, 'UPDATE_COMPANY', 'Company', savedCompany.id, updateCompanyDto, ipAddress);
 
     return savedCompany;
   }
 
-  async toggleStatus(id: string, currentUserId: string): Promise<Company> {
+  async toggleStatus(id: string, currentUserId: string, ipAddress?: string): Promise<Company> {
     const company = await this.findOne(id);
     company.isActive = !company.isActive;
 
@@ -116,12 +116,13 @@ export class CompaniesService {
       'Company',
       savedCompany.id,
       null,
+      ipAddress,
     );
 
     return savedCompany;
   }
 
-  async remove(id: string, currentUserId: string): Promise<{ message: string }> {
+  async remove(id: string, currentUserId: string, ipAddress?: string): Promise<{ message: string }> {
     const company = await this.findOne(id);
 
     // Check if company has linked users
@@ -134,7 +135,7 @@ export class CompaniesService {
     await this.companyRepository.remove(company);
 
     // Audit log
-    await this.logAuditAction(currentUserId, 'DELETE_COMPANY', 'Company', id, { name: company.name });
+    await this.logAuditAction(currentUserId, 'DELETE_COMPANY', 'Company', id, { name: company.name }, ipAddress);
 
     return { message: 'Entreprise supprimée avec succès' };
   }
@@ -188,7 +189,7 @@ export class CompaniesService {
   }
 
   // Import multiple clients from DMS
-  async importClients(clients: ImportClientDto[], currentUserId: string): Promise<{ imported: number; skipped: number; errors: string[] }> {
+  async importClients(clients: ImportClientDto[], currentUserId: string, ipAddress?: string): Promise<{ imported: number; skipped: number; errors: string[] }> {
     const errors: string[] = [];
     let imported = 0;
     let skipped = 0;
@@ -226,7 +227,7 @@ export class CompaniesService {
           name: savedCompany.name,
           dmsClientCode: savedCompany.dmsClientCode,
           source: 'DMS_IMPORT',
-        });
+        }, ipAddress);
 
         imported++;
       } catch (error: any) {
@@ -238,7 +239,7 @@ export class CompaniesService {
   }
 
   // Bulk delete companies
-  async bulkDelete(ids: string[], currentUserId: string): Promise<{ deleted: number; skipped: number; errors: string[] }> {
+  async bulkDelete(ids: string[], currentUserId: string, ipAddress?: string): Promise<{ deleted: number; skipped: number; errors: string[] }> {
     const errors: string[] = [];
     let deleted = 0;
     let skipped = 0;
@@ -266,7 +267,7 @@ export class CompaniesService {
         await this.companyRepository.remove(company);
 
         // Audit log
-        await this.logAuditAction(currentUserId, 'DELETE_COMPANY', 'Company', id, { name: company.name, source: 'BULK_DELETE' });
+        await this.logAuditAction(currentUserId, 'DELETE_COMPANY', 'Company', id, { name: company.name, source: 'BULK_DELETE' }, ipAddress);
 
         deleted++;
       } catch (error: any) {
@@ -284,6 +285,7 @@ export class CompaniesService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     const auditLog = this.auditLogRepository.create({
       userId,
@@ -291,6 +293,7 @@ export class CompaniesService {
       entityType,
       entityId,
       details,
+      ipAddress,
     });
     await this.auditLogRepository.save(auditLog);
   }

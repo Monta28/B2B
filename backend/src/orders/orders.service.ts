@@ -82,7 +82,7 @@ export class OrdersService {
     return order;
   }
 
-  async create(createOrderDto: CreateOrderDto, currentUser: any): Promise<Order> {
+  async create(createOrderDto: CreateOrderDto, currentUser: any, ipAddress?: string): Promise<Order> {
     const company = await this.companyRepository.findOne({
       where: { id: currentUser.companyId },
     });
@@ -143,7 +143,7 @@ export class OrdersService {
     await this.logAuditAction(currentUser.id, 'CREATE_ORDER', 'Order', savedOrder.id, {
       orderNumber: savedOrder.orderNumber,
       totalHt: savedOrder.totalHt,
-    });
+    }, ipAddress);
 
     // Notifier tous les admins de la nouvelle commande
     await this.notifyAdminsNewOrder(savedOrder, company.name);
@@ -183,7 +183,7 @@ export class OrdersService {
     }
   }
 
-  async update(id: string, updateOrderDto: UpdateOrderDto, currentUser: any): Promise<Order> {
+  async update(id: string, updateOrderDto: UpdateOrderDto, currentUser: any, ipAddress?: string): Promise<Order> {
     const order = await this.findOne(id, currentUser);
 
     // Check if order can be modified (only PENDING orders)
@@ -249,12 +249,12 @@ export class OrdersService {
     });
 
     // Audit log
-    await this.logAuditAction(currentUser.id, 'UPDATE_ORDER', 'Order', savedOrder.id, updateOrderDto);
+    await this.logAuditAction(currentUser.id, 'UPDATE_ORDER', 'Order', savedOrder.id, updateOrderDto, ipAddress);
 
     return this.findOne(savedOrder.id, currentUser);
   }
 
-  async updateStatus(id: string, updateStatusDto: UpdateOrderStatusDto, currentUser: any): Promise<Order> {
+  async updateStatus(id: string, updateStatusDto: UpdateOrderStatusDto, currentUser: any, ipAddress?: string): Promise<Order> {
     const order = await this.findOne(id, currentUser);
 
     const isAdmin = [UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN].includes(currentUser.role);
@@ -303,7 +303,7 @@ export class OrdersService {
     await this.logAuditAction(currentUser.id, 'UPDATE_ORDER_STATUS', 'Order', savedOrder.id, {
       oldStatus,
       newStatus: updateStatusDto.status,
-    });
+    }, ipAddress);
 
     return this.findOne(savedOrder.id, currentUser);
   }
@@ -368,11 +368,11 @@ export class OrdersService {
     }
   }
 
-  async printPreparation(id: string, currentUser: any): Promise<{ message: string; orderNumber: string }> {
+  async printPreparation(id: string, currentUser: any, ipAddress?: string): Promise<{ message: string; orderNumber: string }> {
     const order = await this.findOne(id, currentUser);
 
     // Audit log
-    await this.logAuditAction(currentUser.id, 'PRINT_PREPARATION', 'Order', order.id, null);
+    await this.logAuditAction(currentUser.id, 'PRINT_PREPARATION', 'Order', order.id, null, ipAddress);
 
     return {
       message: 'Bon de préparation imprimé',
@@ -380,7 +380,7 @@ export class OrdersService {
     };
   }
 
-  async setEditing(id: string, isEditing: boolean, currentUser: any): Promise<Order> {
+  async setEditing(id: string, isEditing: boolean, currentUser: any, ipAddress?: string): Promise<Order> {
     const order = await this.findOne(id, currentUser);
 
     // Seules les commandes en attente peuvent être verrouillées/déverrouillées pour édition
@@ -407,7 +407,7 @@ export class OrdersService {
       editingStartedAt: isEditing ? savedOrder.editingStartedAt : undefined,
     });
 
-    await this.logAuditAction(currentUser.id, 'LOCK_EDIT', 'Order', savedOrder.id, { isEditing });
+    await this.logAuditAction(currentUser.id, 'LOCK_EDIT', 'Order', savedOrder.id, { isEditing }, ipAddress);
     return savedOrder;
   }
 
@@ -435,6 +435,7 @@ export class OrdersService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     const auditLog = this.auditLogRepository.create({
       userId,
@@ -442,6 +443,7 @@ export class OrdersService {
       entityType,
       entityId,
       details,
+      ipAddress,
     });
     await this.auditLogRepository.save(auditLog);
   }
@@ -812,7 +814,7 @@ export class OrdersService {
   }
 
   // Supprimer une commande (SYSADMIN uniquement)
-  async remove(id: string, currentUser: any): Promise<{ message: string }> {
+  async remove(id: string, currentUser: any, ipAddress?: string): Promise<{ message: string }> {
     const order = await this.orderRepository.findOne({
       where: { id },
       relations: ['items'],
@@ -831,7 +833,7 @@ export class OrdersService {
     await this.logAuditAction(currentUser.id, 'DELETE_ORDER', 'Order', id, {
       orderNumber,
       deletedBy: currentUser.email,
-    });
+    }, ipAddress);
 
     return { message: `Commande ${orderNumber} supprimée avec succès` };
   }

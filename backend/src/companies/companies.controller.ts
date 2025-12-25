@@ -9,6 +9,7 @@ import {
   Param,
   UseGuards,
   Request,
+  Ip,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CompaniesService, ImportClientDto } from './companies.service';
@@ -21,6 +22,10 @@ import { UserRole } from '../entities/user.entity';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class CompaniesController {
   constructor(private companiesService: CompaniesService) {}
+
+  private getClientIp(req: any, ip: string): string {
+    return req.headers['x-forwarded-for']?.split(',')[0] || ip;
+  }
 
   @Get()
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN)
@@ -43,15 +48,15 @@ export class CompaniesController {
 
   @Post()
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
-  async create(@Body() createCompanyDto: CreateCompanyDto, @Request() req) {
-    return this.companiesService.create(createCompanyDto, req.user.id);
+  async create(@Body() createCompanyDto: CreateCompanyDto, @Request() req, @Ip() ip: string) {
+    return this.companiesService.create(createCompanyDto, req.user.id, this.getClientIp(req, ip));
   }
 
   // Import multiple clients from DMS
   @Post('import')
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
-  async importClients(@Body() body: { clients: ImportClientDto[] }, @Request() req) {
-    return this.companiesService.importClients(body.clients, req.user.id);
+  async importClients(@Body() body: { clients: ImportClientDto[] }, @Request() req, @Ip() ip: string) {
+    return this.companiesService.importClients(body.clients, req.user.id, this.getClientIp(req, ip));
   }
 
   @Put(':id')
@@ -60,26 +65,27 @@ export class CompaniesController {
     @Param('id') id: string,
     @Body() updateCompanyDto: UpdateCompanyDto,
     @Request() req,
+    @Ip() ip: string,
   ) {
-    return this.companiesService.update(id, updateCompanyDto, req.user.id);
+    return this.companiesService.update(id, updateCompanyDto, req.user.id, this.getClientIp(req, ip));
   }
 
   @Patch(':id/status')
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
-  async toggleStatus(@Param('id') id: string, @Request() req) {
-    return this.companiesService.toggleStatus(id, req.user.id);
+  async toggleStatus(@Param('id') id: string, @Request() req, @Ip() ip: string) {
+    return this.companiesService.toggleStatus(id, req.user.id, this.getClientIp(req, ip));
   }
 
   @Delete(':id')
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
-  async remove(@Param('id') id: string, @Request() req) {
-    return this.companiesService.remove(id, req.user.id);
+  async remove(@Param('id') id: string, @Request() req, @Ip() ip: string) {
+    return this.companiesService.remove(id, req.user.id, this.getClientIp(req, ip));
   }
 
   // Bulk delete companies
   @Post('bulk-delete')
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
-  async bulkDelete(@Body() body: { ids: string[] }, @Request() req) {
-    return this.companiesService.bulkDelete(body.ids, req.user.id);
+  async bulkDelete(@Body() body: { ids: string[] }, @Request() req, @Ip() ip: string) {
+    return this.companiesService.bulkDelete(body.ids, req.user.id, this.getClientIp(req, ip));
   }
 }

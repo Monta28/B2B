@@ -222,7 +222,7 @@ export class DmsMappingService {
   }
 
   // Create or update mapping
-  async upsertMapping(dto: CreateMappingDto, currentUserId: string): Promise<DmsMapping> {
+  async upsertMapping(dto: CreateMappingDto, currentUserId: string, ipAddress?: string): Promise<DmsMapping> {
     let mapping = await this.dmsMappingRepository.findOne({
       where: { mappingType: dto.mappingType },
     });
@@ -250,13 +250,13 @@ export class DmsMappingService {
     await this.logAuditAction(currentUserId, 'UPSERT_DMS_MAPPING', 'DmsMapping', savedMapping.id, {
       mappingType: dto.mappingType,
       dmsTableName: dto.dmsTableName,
-    });
+    }, ipAddress);
 
     return savedMapping;
   }
 
   // Delete mapping
-  async remove(id: string, currentUserId: string): Promise<{ message: string }> {
+  async remove(id: string, currentUserId: string, ipAddress?: string): Promise<{ message: string }> {
     const mapping = await this.dmsMappingRepository.findOne({ where: { id } });
 
     if (!mapping) {
@@ -268,7 +268,7 @@ export class DmsMappingService {
     // Audit log
     await this.logAuditAction(currentUserId, 'DELETE_DMS_MAPPING', 'DmsMapping', id, {
       mappingType: mapping.mappingType,
-    });
+    }, ipAddress);
 
     return { message: 'Mapping supprimé avec succès' };
   }
@@ -486,6 +486,7 @@ export class DmsMappingService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     const auditLog = this.auditLogRepository.create({
       userId,
@@ -493,6 +494,7 @@ export class DmsMappingService {
       entityType,
       entityId,
       details,
+      ipAddress,
     });
     await this.auditLogRepository.save(auditLog);
   }

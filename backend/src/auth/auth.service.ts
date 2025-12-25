@@ -38,7 +38,7 @@ export class AuthService {
     return null;
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, ipAddress?: string) {
     // loginDto.email can be either email or username
     const user = await this.validateUser(loginDto.email, loginDto.password);
 
@@ -60,7 +60,7 @@ export class AuthService {
     };
 
     // Log login action
-    await this.logAuditAction(user.id, 'LOGIN', 'User', user.id, null);
+    await this.logAuditAction(user.id, 'LOGIN', 'User', user.id, null, ipAddress);
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -77,8 +77,8 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string) {
-    await this.logAuditAction(userId, 'LOGOUT', 'User', userId, null);
+  async logout(userId: string, ipAddress?: string) {
+    await this.logAuditAction(userId, 'LOGOUT', 'User', userId, null, ipAddress);
     return { message: 'Déconnexion réussie' };
   }
 
@@ -110,6 +110,7 @@ export class AuthService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     const auditLog = this.auditLogRepository.create({
       userId,
@@ -117,6 +118,7 @@ export class AuthService {
       entityType,
       entityId,
       details,
+      ipAddress,
     });
     await this.auditLogRepository.save(auditLog);
   }

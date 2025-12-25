@@ -116,7 +116,7 @@ export class AppConfigService {
     return this.sanitizePublic(config);
   }
 
-  async updateConfig(updateConfigDto: UpdateAppConfigDto, currentUserId: string): Promise<any> {
+  async updateConfig(updateConfigDto: UpdateAppConfigDto, currentUserId: string, ipAddress?: string): Promise<any> {
     // Get raw config from DB (not the parsed version)
     let config = await this.appConfigRepository.findOne({
       where: {},
@@ -162,7 +162,7 @@ export class AppConfigService {
     }
 
     // Audit log
-    await this.logAuditAction(currentUserId, 'UPDATE_CONFIG', 'AppConfig', savedConfig.id, updateConfigDto);
+    await this.logAuditAction(currentUserId, 'UPDATE_CONFIG', 'AppConfig', savedConfig.id, updateConfigDto, ipAddress);
 
     // Return with parsed brandLogos
     return this.getConfig();
@@ -303,6 +303,7 @@ export class AppConfigService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     // Remove sensitive data from audit log
     const sanitizedDetails = { ...details };
@@ -316,6 +317,7 @@ export class AppConfigService {
       entityType,
       entityId,
       details: sanitizedDetails,
+      ipAddress,
     });
     await this.auditLogRepository.save(auditLog);
   }

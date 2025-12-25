@@ -6,6 +6,7 @@ import {
   Body,
   UseGuards,
   Request,
+  Ip,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AppConfigService } from './app-config.service';
@@ -19,6 +20,10 @@ import { UserRole } from '../entities/user.entity';
 export class AppConfigController {
   constructor(private appConfigService: AppConfigService) {}
 
+  private getClientIp(req: any, ip: string): string {
+    return req.headers['x-forwarded-for']?.split(',')[0] || ip;
+  }
+
   @Get('app')
   async getConfig() {
     return this.appConfigService.getConfig();
@@ -26,8 +31,8 @@ export class AppConfigController {
 
   @Put('app')
   @Roles(UserRole.SYSTEM_ADMIN)
-  async updateConfig(@Body() updateConfigDto: UpdateAppConfigDto, @Request() req) {
-    return this.appConfigService.updateConfig(updateConfigDto, req.user.id);
+  async updateConfig(@Body() updateConfigDto: UpdateAppConfigDto, @Request() req, @Ip() ip: string) {
+    return this.appConfigService.updateConfig(updateConfigDto, req.user.id, this.getClientIp(req, ip));
   }
 
   @Post('test-sql-connection')

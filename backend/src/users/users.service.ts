@@ -57,7 +57,7 @@ export class UsersService {
     return user;
   }
 
-  async create(createUserDto: CreateUserDto, currentUserId: string): Promise<User> {
+  async create(createUserDto: CreateUserDto, currentUserId: string, ipAddress?: string): Promise<User> {
     // Check email uniqueness
     const existingByEmail = await this.userRepository.findOne({
       where: { email: createUserDto.email },
@@ -113,12 +113,12 @@ export class UsersService {
       email: savedUser.email,
       username: savedUser.username,
       role: savedUser.role,
-    });
+    }, ipAddress);
 
     return savedUser;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, currentUserId: string): Promise<User> {
+  async update(id: string, updateUserDto: UpdateUserDto, currentUserId: string, ipAddress?: string): Promise<User> {
     const user = await this.findOne(id);
 
     if (updateUserDto.email && updateUserDto.email !== user.email) {
@@ -173,34 +173,34 @@ export class UsersService {
 
     const savedUser = await this.userRepository.save(user);
 
-    await this.logAuditAction(currentUserId, 'UPDATE_USER', 'User', savedUser.id, updateUserDto);
+    await this.logAuditAction(currentUserId, 'UPDATE_USER', 'User', savedUser.id, updateUserDto, ipAddress);
 
     return savedUser;
   }
 
-  async toggleStatus(id: string, currentUserId: string): Promise<User> {
+  async toggleStatus(id: string, currentUserId: string, ipAddress?: string): Promise<User> {
     const user = await this.findOne(id);
     user.isActive = !user.isActive;
 
     const savedUser = await this.userRepository.save(user);
 
-    await this.logAuditAction(currentUserId, user.isActive ? 'ACTIVATE_USER' : 'DEACTIVATE_USER', 'User', savedUser.id, null);
+    await this.logAuditAction(currentUserId, user.isActive ? 'ACTIVATE_USER' : 'DEACTIVATE_USER', 'User', savedUser.id, null, ipAddress);
 
     return savedUser;
   }
 
-  async resetPassword(id: string, resetPasswordDto: ResetPasswordDto, currentUserId: string): Promise<{ message: string }> {
+  async resetPassword(id: string, resetPasswordDto: ResetPasswordDto, currentUserId: string, ipAddress?: string): Promise<{ message: string }> {
     const user = await this.findOne(id);
 
     user.passwordHash = await bcrypt.hash(resetPasswordDto.newPassword, 10);
     await this.userRepository.save(user);
 
-    await this.logAuditAction(currentUserId, 'RESET_PASSWORD', 'User', id, null);
+    await this.logAuditAction(currentUserId, 'RESET_PASSWORD', 'User', id, null, ipAddress);
 
     return { message: 'Mot de passe réinitialisé avec succès' };
   }
 
-  async remove(id: string, currentUserId: string, forceDelete: boolean = false): Promise<{ message: string }> {
+  async remove(id: string, currentUserId: string, forceDelete: boolean = false, ipAddress?: string): Promise<{ message: string }> {
     const user = await this.findOne(id);
 
     // Check for dependencies before deletion
@@ -271,7 +271,7 @@ export class UsersService {
         email: user.email,
         deletedOrders: ordersCount,
         hadCart: !!cart,
-      });
+      }, ipAddress);
     }
 
     await this.userRepository.remove(user);
@@ -279,7 +279,7 @@ export class UsersService {
     await this.logAuditAction(currentUserId, 'DELETE_USER', 'User', id, {
       email: user.email,
       forceDelete,
-    });
+    }, ipAddress);
 
     return { message: forceDelete
       ? 'Utilisateur et toutes ses données supprimés avec succès'
@@ -293,6 +293,7 @@ export class UsersService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     const auditLog = new AuditLog();
     auditLog.userId = userId;
@@ -300,6 +301,7 @@ export class UsersService {
     auditLog.entityType = entityType;
     auditLog.entityId = entityId;
     auditLog.details = details;
+    auditLog.ipAddress = ipAddress;
     await this.auditLogRepository.save(auditLog);
   }
 }

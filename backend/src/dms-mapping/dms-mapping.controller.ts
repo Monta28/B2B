@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req, Ip } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -11,6 +11,10 @@ import { DmsMappingType } from '../entities/dms-mapping.entity';
 @Roles(UserRole.SYSTEM_ADMIN)
 export class DmsMappingController {
   constructor(private readonly dmsMappingService: DmsMappingService) {}
+
+  private getClientIp(req: any, ip: string): string {
+    return req.headers['x-forwarded-for']?.split(',')[0] || ip;
+  }
 
   // Get all mappings
   @Get()
@@ -86,8 +90,9 @@ export class DmsMappingController {
   async upsertMapping(
     @Body() dto: CreateMappingDto,
     @Req() req: any,
+    @Ip() ip: string,
   ) {
-    const mapping = await this.dmsMappingService.upsertMapping(dto, req.user.id);
+    const mapping = await this.dmsMappingService.upsertMapping(dto, req.user.id, this.getClientIp(req, ip));
     return {
       ...mapping,
       columnMappings: mapping.columnMappings ? JSON.parse(mapping.columnMappings) : {},
@@ -96,7 +101,7 @@ export class DmsMappingController {
 
   // Delete mapping (revert to default)
   @Delete(':id')
-  async remove(@Param('id') id: string, @Req() req: any) {
-    return this.dmsMappingService.remove(id, req.user.id);
+  async remove(@Param('id') id: string, @Req() req: any, @Ip() ip: string) {
+    return this.dmsMappingService.remove(id, req.user.id, this.getClientIp(req, ip));
   }
 }

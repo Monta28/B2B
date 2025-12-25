@@ -36,37 +36,37 @@ export class NewsService {
     return news;
   }
 
-  async create(createNewsDto: CreateNewsDto, currentUserId: string): Promise<News> {
+  async create(createNewsDto: CreateNewsDto, currentUserId: string, ipAddress?: string): Promise<News> {
     const news = this.newsRepository.create(createNewsDto);
     const savedNews = await this.newsRepository.save(news);
 
     // Audit log
     await this.logAuditAction(currentUserId, 'CREATE_NEWS', 'News', savedNews.id, {
       title: savedNews.title,
-    });
+    }, ipAddress);
 
     return savedNews;
   }
 
-  async update(id: string, updateNewsDto: UpdateNewsDto, currentUserId: string): Promise<News> {
+  async update(id: string, updateNewsDto: UpdateNewsDto, currentUserId: string, ipAddress?: string): Promise<News> {
     const news = await this.findOne(id);
 
     Object.assign(news, updateNewsDto);
     const savedNews = await this.newsRepository.save(news);
 
     // Audit log
-    await this.logAuditAction(currentUserId, 'UPDATE_NEWS', 'News', savedNews.id, updateNewsDto);
+    await this.logAuditAction(currentUserId, 'UPDATE_NEWS', 'News', savedNews.id, updateNewsDto, ipAddress);
 
     return savedNews;
   }
 
-  async remove(id: string, currentUserId: string): Promise<{ message: string }> {
+  async remove(id: string, currentUserId: string, ipAddress?: string): Promise<{ message: string }> {
     const news = await this.findOne(id);
 
     await this.newsRepository.remove(news);
 
     // Audit log
-    await this.logAuditAction(currentUserId, 'DELETE_NEWS', 'News', id, { title: news.title });
+    await this.logAuditAction(currentUserId, 'DELETE_NEWS', 'News', id, { title: news.title }, ipAddress);
 
     return { message: 'Actualité supprimée avec succès' };
   }
@@ -77,6 +77,7 @@ export class NewsService {
     entityType: string,
     entityId: string,
     details: any,
+    ipAddress?: string,
   ) {
     const auditLog = this.auditLogRepository.create({
       userId,
@@ -84,6 +85,7 @@ export class NewsService {
       entityType,
       entityId,
       details,
+      ipAddress,
     });
     await this.auditLogRepository.save(auditLog);
   }

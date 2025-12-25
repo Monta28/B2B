@@ -9,6 +9,7 @@ import {
   Param,
   UseGuards,
   Request,
+  Ip,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OrdersService } from './orders.service';
@@ -88,6 +89,10 @@ export class OrdersController {
     private dmsMappingService: DmsMappingService,
   ) {}
 
+  private getClientIp(req: any, ip: string): string {
+    return req.headers['x-forwarded-for']?.split(',')[0] || ip;
+  }
+
   @Get()
   async findAll(@Request() req) {
     // Nettoyer les verrous expirés à chaque requête (background, non-bloquant)
@@ -105,8 +110,8 @@ export class OrdersController {
   }
 
   @Post()
-  async create(@Body() createOrderDto: CreateOrderDto, @Request() req) {
-    return this.ordersService.create(createOrderDto, req.user);
+  async create(@Body() createOrderDto: CreateOrderDto, @Request() req, @Ip() ip: string) {
+    return this.ordersService.create(createOrderDto, req.user, this.getClientIp(req, ip));
   }
 
   @Put(':id')
@@ -114,8 +119,9 @@ export class OrdersController {
     @Param('id') id: string,
     @Body() updateOrderDto: UpdateOrderDto,
     @Request() req,
+    @Ip() ip: string,
   ) {
-    return this.ordersService.update(id, updateOrderDto, req.user);
+    return this.ordersService.update(id, updateOrderDto, req.user, this.getClientIp(req, ip));
   }
 
   @Patch(':id/status')
@@ -123,13 +129,14 @@ export class OrdersController {
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateOrderStatusDto,
     @Request() req,
+    @Ip() ip: string,
   ) {
-    return this.ordersService.updateStatus(id, updateStatusDto, req.user);
+    return this.ordersService.updateStatus(id, updateStatusDto, req.user, this.getClientIp(req, ip));
   }
 
   @Post(':id/print')
-  async printPreparation(@Param('id') id: string, @Request() req) {
-    return this.ordersService.printPreparation(id, req.user);
+  async printPreparation(@Param('id') id: string, @Request() req, @Ip() ip: string) {
+    return this.ordersService.printPreparation(id, req.user, this.getClientIp(req, ip));
   }
 
   // Get article positions from DMS for preparation slip
@@ -148,8 +155,9 @@ export class OrdersController {
     @Param('id') id: string,
     @Body('isEditing') isEditing: boolean,
     @Request() req,
+    @Ip() ip: string,
   ) {
-    return this.ordersService.setEditing(id, !!isEditing, req.user);
+    return this.ordersService.setEditing(id, !!isEditing, req.user, this.getClientIp(req, ip));
   }
 
   @Post('cleanup-editing-locks')
@@ -176,7 +184,7 @@ export class OrdersController {
   // Supprimer une commande (SYSADMIN uniquement)
   @Delete(':id')
   @Roles(UserRole.SYSTEM_ADMIN)
-  async remove(@Param('id') id: string, @Request() req) {
-    return this.ordersService.remove(id, req.user);
+  async remove(@Param('id') id: string, @Request() req, @Ip() ip: string) {
+    return this.ordersService.remove(id, req.user, this.getClientIp(req, ip));
   }
 }
