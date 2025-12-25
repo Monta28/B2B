@@ -873,6 +873,31 @@ export class OrdersService {
     return { synced, errors };
   }
 
+  // Supprimer une commande (SYSADMIN uniquement)
+  async remove(id: string, currentUser: any): Promise<{ message: string }> {
+    const order = await this.orderRepository.findOne({
+      where: { id },
+      relations: ['items'],
+    });
+
+    if (!order) {
+      throw new NotFoundException('Commande non trouvée');
+    }
+
+    const orderNumber = order.orderNumber;
+
+    // Supprimer la commande (cascade supprime les items)
+    await this.orderRepository.remove(order);
+
+    // Log dans l'audit
+    await this.logAuditAction(currentUser.id, 'DELETE_ORDER', 'Order', id, {
+      orderNumber,
+      deletedBy: currentUser.email,
+    });
+
+    return { message: `Commande ${orderNumber} supprimée avec succès` };
+  }
+
   // Générer un numéro de commande unique pour le DMS (format numérique: YYYYMM + séquence)
   private async generateDmsOrderNumber(pool: sql.ConnectionPool, tableName: string, columnName: string): Promise<string> {
     try {

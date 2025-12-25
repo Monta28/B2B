@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -170,5 +171,12 @@ export class OrdersController {
         ? `${result.synced} commande(s) synchronisée(s) avec le DMS`
         : 'Aucune nouvelle synchronisation détectée',
     };
+  }
+
+  // Supprimer une commande (SYSADMIN uniquement)
+  @Delete(':id')
+  @Roles(UserRole.SYSTEM_ADMIN)
+  async remove(@Param('id') id: string, @Request() req) {
+    return this.ordersService.remove(id, req.user);
   }
 }
