@@ -12,6 +12,16 @@ export default defineConfig(({ mode }) => {
   const backendPort = parseInt(env.BACKEND_PORT || '4001', 10);
 
   return {
+    server: {
+      port: frontendPort,
+      host: '0.0.0.0',
+      proxy: {
+        '/api': {
+          target: `http://localhost:${backendPort}`,
+          changeOrigin: true,
+        },
+      },
+    },
     plugins: [react()],
     define: {
       'process.env.BACKEND_PORT': JSON.stringify(backendPort),
