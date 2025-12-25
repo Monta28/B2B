@@ -236,6 +236,11 @@ export const api = {
     }
   },
 
+  // Delete order (SYSADMIN only)
+  deleteOrder: async (orderId: string): Promise<{ message: string }> => {
+    return fetchApi<{ message: string }>(`/orders/${orderId}`, { method: 'DELETE' });
+  },
+
   // News
   getNews: async (activeOnly: boolean = false) => {
     const news = await fetchApi<any[]>(`/news${activeOnly ? '?activeOnly=true' : ''}`);
@@ -402,7 +407,7 @@ export const api = {
 
     toggleUserStatus: (id: string) => fetchApi<any>(`/users/${id}/status`, { method: 'PATCH' }),
 
-    deleteUser: (id: string) => fetchApi<any>(`/users/${id}`, { method: 'DELETE' }),
+    deleteUser: (id: string, force: boolean = false) => fetchApi<any>(`/users/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }),
 
     resetUserPassword: (userId: string, newPassword: string) => fetchApi<any>(`/users/${userId}/reset-password`, {
       method: 'POST',

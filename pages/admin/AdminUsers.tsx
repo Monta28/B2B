@@ -24,10 +24,13 @@ export const AdminUsers = () => {
   // Modals States
   const [toggleConfirmId, setToggleConfirmId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [resetPwdId, setResetPwdId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  const isSysAdmin = currentUser?.role === UserRole.SYSTEM_ADMIN;
 
   // Column filtering state
   const [filters, setFilters] = useState({
@@ -79,8 +82,17 @@ export const AdminUsers = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: api.admin.deleteUser,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+    mutationFn: ({ userId, force }: { userId: string; force?: boolean }) => api.admin.deleteUser(userId, force),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast.success('Utilisateur supprimé avec succès');
+      setDeleteConfirmId(null);
+      setDeleteError(null);
+    },
+    onError: (error: any) => {
+      const message = error?.message || 'Une erreur est survenue lors de la suppression';
+      setDeleteError(message);
+    }
   });
 
   const resetPwdMutation = useMutation({
@@ -494,15 +506,67 @@ export const AdminUsers = () => {
         confirmLabel={getUserStatus(toggleConfirmId || '') ? 'Bloquer' : 'Réactiver'}
       />
 
-      <ConfirmModal
-        isOpen={!!deleteConfirmId}
-        onClose={() => setDeleteConfirmId(null)}
-        onConfirm={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
-        title="Supprimer l'utilisateur ?"
-        message="Attention : cette action est irréversible et supprimera l'historique associé."
-        isDestructive={true}
-        confirmLabel="Supprimer"
-      />
+      {/* Delete User Modal with error handling and force delete option */}
+      {deleteConfirmId && createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+          <div className="card-futuristic rounded-2xl p-6 max-w-md w-full shadow-card border border-accent/20">
+            <h2 className="text-xl font-bold text-white mb-4">
+              {deleteError ? 'Impossible de supprimer' : 'Supprimer l\'utilisateur ?'}
+            </h2>
+
+            {deleteError ? (
+              <div className="space-y-4">
+                <div className="p-3 bg-neon-pink/10 border border-neon-pink/20 rounded-md text-neon-pink text-sm">
+                  {deleteError}
+                </div>
+                {isSysAdmin && (
+                  <div className="p-3 bg-neon-orange/10 border border-neon-orange/20 rounded-md text-neon-orange text-sm">
+                    <strong>Option SYSADMIN:</strong> Vous pouvez forcer la suppression. Cela supprimera également toutes les commandes et données associées à cet utilisateur.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">
+                Attention : cette action est irréversible et supprimera l'historique associé.
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmId(null);
+                  setDeleteError(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-brand-800 text-slate-300 hover:bg-brand-700 transition-colors"
+              >
+                Annuler
+              </button>
+
+              {deleteError && isSysAdmin ? (
+                <button
+                  type="button"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => deleteMutation.mutate({ userId: deleteConfirmId, force: true })}
+                  className="px-4 py-2 rounded-lg bg-neon-pink hover:bg-neon-pink/80 text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Suppression...' : 'Supprimer définitivement'}
+                </button>
+              ) : !deleteError ? (
+                <button
+                  type="button"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => deleteMutation.mutate({ userId: deleteConfirmId })}
+                  className="px-4 py-2 rounded-lg bg-neon-pink hover:bg-neon-pink/80 text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Password Reset Modal */}
       {resetPwdId && createPortal(

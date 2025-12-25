@@ -111,6 +111,7 @@ export const Orders = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isInternal = hasRole([UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN]);
+  const isSysAdmin = hasRole([UserRole.SYSTEM_ADMIN]);
   const isClientAdmin = hasRole([UserRole.CLIENT_ADMIN]);
   const isClient = hasRole([UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER]);
 
@@ -131,6 +132,7 @@ export const Orders = () => {
   const [activeTab, setActiveTab] = useState<OrderTab>('ACTIVE');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
   const [confirmAction, setConfirmAction] = useState<{ id: string, status: OrderStatus } | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [printOnValidate, setPrintOnValidate] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
@@ -625,6 +627,18 @@ export const Orders = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erreur lors de la synchronisation');
+    }
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (orderId: string) => api.deleteOrder(orderId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success(result.message || 'Commande supprimée avec succès');
+      setDeleteOrderId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erreur lors de la suppression');
     }
   });
 
@@ -1313,6 +1327,17 @@ export const Orders = () => {
                             </button>
                           </>
                         )}
+                        {isSysAdmin && (
+                          <button
+                            onClick={() => setDeleteOrderId(order.id)}
+                            className="p-1.5 text-neon-pink hover:bg-neon-pink/10 rounded transition-all"
+                            title="Supprimer"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1460,6 +1485,17 @@ export const Orders = () => {
         message="Les modifications que vous avez apportées ne seront peut-être pas enregistrées."
         confirmLabel={showCloseConfirm === 'refresh' ? 'Actualiser' : 'Quitter'}
         cancelLabel="Annuler"
+        isDestructive={true}
+      />
+
+      {/* Modal de confirmation de suppression de commande (SYSADMIN) */}
+      <ConfirmModal
+        isOpen={!!deleteOrderId}
+        onClose={() => setDeleteOrderId(null)}
+        onConfirm={() => deleteOrderId && deleteOrderMutation.mutate(deleteOrderId)}
+        title="Supprimer définitivement cette commande ?"
+        message="ATTENTION: Cette action est irréversible. La commande sera définitivement supprimée de la base de données, y compris tous ses articles et son historique. Cette action est réservée au Super Administrateur."
+        confirmLabel="Supprimer définitivement"
         isDestructive={true}
       />
 
