@@ -3,6 +3,7 @@ import {
   Get,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditService } from './audit.service';
@@ -18,6 +19,7 @@ export class AuditController {
 
   @Get()
   async findAll(
+    @Request() req,
     @Query('userId') userId?: string,
     @Query('action') action?: string,
     @Query('entityType') entityType?: string,
@@ -26,6 +28,7 @@ export class AuditController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
+    const currentUserRole = req.user?.role as UserRole;
     return this.auditService.findAll({
       userId,
       action,
@@ -34,6 +37,7 @@ export class AuditController {
       endDate: endDate ? new Date(endDate) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
+      currentUserRole,
     });
   }
 

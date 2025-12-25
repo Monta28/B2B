@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { AuditLog } from '../entities/audit-log.entity';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 
 export type AuditLogWithUser = AuditLog;
 
@@ -23,10 +23,19 @@ export class AuditService {
     endDate?: Date;
     limit?: number;
     offset?: number;
+    currentUserRole?: UserRole;
   }): Promise<{ data: AuditLogWithUser[]; total: number }> {
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit')
       .leftJoinAndSelect('audit.user', 'user');
+
+    // Si l'utilisateur connecté est FULL_ADMIN, exclure les logs des SYSTEM_ADMIN
+    if (options?.currentUserRole === UserRole.FULL_ADMIN) {
+      queryBuilder.andWhere(
+        '(user.role IS NULL OR user.role != :systemAdminRole)',
+        { systemAdminRole: UserRole.SYSTEM_ADMIN }
+      );
+    }
 
     if (options?.userId) {
       queryBuilder.andWhere('audit.userId = :userId', { userId: options.userId });
