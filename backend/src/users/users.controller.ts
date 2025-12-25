@@ -99,7 +99,11 @@ export class UsersController {
 
   @Delete(':id')
   @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN)
-  async remove(@Param('id') id: string, @Request() req) {
+  async remove(
+    @Param('id') id: string,
+    @Query('force') force: string,
+    @Request() req,
+  ) {
     // FULL_ADMIN cannot delete SYSTEM_ADMIN users
     if (req.user.role === UserRole.FULL_ADMIN) {
       const targetUser = await this.usersService.findOne(id);
@@ -107,6 +111,8 @@ export class UsersController {
         throw new ForbiddenException('Vous n\'avez pas la permission de supprimer un Super Admin');
       }
     }
-    return this.usersService.remove(id, req.user.id);
+    // Only SYSTEM_ADMIN can force delete
+    const forceDelete = force === 'true' && req.user.role === UserRole.SYSTEM_ADMIN;
+    return this.usersService.remove(id, req.user.id, forceDelete);
   }
 }

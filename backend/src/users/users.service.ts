@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../entities/user.entity';
 import { Company } from '../entities/company.entity';
 import { AuditLog } from '../entities/audit-log.entity';
+import { Order } from '../entities/order.entity';
+import { Cart } from '../entities/cart.entity';
 import { CreateUserDto, UpdateUserDto, ResetPasswordDto } from './dto/create-user.dto';
 
 @Injectable()
@@ -16,6 +18,10 @@ export class UsersService {
     private companyRepository: Repository<Company>,
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
+    @InjectRepository(Order)
+    private orderRepository: Repository<Order>,
+    @InjectRepository(Cart)
+    private cartRepository: Repository<Cart>,
   ) {}
 
   async findAll(currentUser: any, companyId?: string): Promise<User[]> {
@@ -202,14 +208,91 @@ export class UsersService {
     return { message: 'Mot de passe réinitialisé avec succès' };
   }
 
-  async remove(id: string, currentUserId: string): Promise<{ message: string }> {
+  async remove(id: string, currentUserId: string, forceDelete: boolean = false): Promise<{ message: string }> {
     const user = await this.findOne(id);
+
+    // Check for dependencies before deletion
+    const dependencies: string[] = [];
+
+    // Check for orders created by this user
+    const ordersCount = await this.orderRepository.count({
+      where: { createdByUserId: id },
+    });
+    if (ordersCount > 0) {
+      dependencies.push(`${ordersCount} commande(s)`);
+    }
+
+    // Check for orders being edited by this user
+    const editingOrdersCount = await this.orderRepository.count({
+      where: { editingByUserId: id },
+    });
+    if (editingOrdersCount > 0) {
+      dependencies.push(`${editingOrdersCount} commande(s) en cours d'édition`);
+    }
+
+    // Check for cart
+    const cart = await this.cartRepository.findOne({
+      where: { userId: id },
+    });
+    if (cart) {
+      dependencies.push('un panier');
+    }
+
+    // If there are dependencies and not force delete, throw error with details
+    if (dependencies.length > 0 && !forceDelete) {
+      throw new BadRequestException(
+        `Impossible de supprimer cet utilisateur. Il possède: ${dependencies.join(', ')}. ` +
+        `Veuillez d'abord réassigner ou supprimer ces éléments, ou utilisez la suppression forcée (SYSADMIN uniquement).`
+      );
+    }
+
+    // If force delete, delete all related data first
+    if (forceDelete && dependencies.length > 0) {
+      // Delete orders and their items (cascade will handle order items)
+      const orders = await this.orderRepository.find({
+        where: { createdByUserId: id },
+        relations: ['items'],
+      });
+      for (const order of orders) {
+        await this.orderRepository.remove(order);
+      }
+
+      // Clear editing status on orders being edited by this user
+      await this.orderRepository.update(
+        { editingByUserId: id },
+        { editingByUserId: null, isEditing: false, editingStartedAt: null }
+      );
+
+      // Delete cart (cascade will handle cart items)
+      if (cart) {
+        await this.cartRepository.remove(cart);
+      }
+
+      // Delete notifications (should be handled by CASCADE but be explicit)
+      await this.userRepository.manager.query(
+        'DELETE FROM notifications WHERE user_id = $1',
+        [id]
+      );
+
+      // Log the force delete action with details
+      await this.logAuditAction(currentUserId, 'FORCE_DELETE_USER_DATA', 'User', id, {
+        email: user.email,
+        deletedOrders: ordersCount,
+        hadCart: !!cart,
+      });
+    }
 
     await this.userRepository.remove(user);
 
-    await this.logAuditAction(currentUserId, 'DELETE_USER', 'User', id, { email: user.email });
+    await this.logAuditAction(currentUserId, 'DELETE_USER', 'User', id, {
+      email: user.email,
+      forceDelete,
+    });
 
-    return { message: 'Utilisateur supprimé avec succès' };
+    return { message: forceDelete
+      ? 'Utilisateur et toutes ses données supprimés avec succès'
+      : 'Utilisateur supprimé avec succès'
+    };
   }
 
   private async logAuditAction(
