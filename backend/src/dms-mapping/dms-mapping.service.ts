@@ -30,6 +30,8 @@ export const DEFAULT_MAPPINGS: Record<string, Record<string, string>> = {
     telephone: 'Telephone',
     email: 'Mail',
     tauxRemise: 'Remise',
+    typeRemise: 'Type_Remise',
+    tauxMajoration: 'Majoration', // ID vers table Majoration
   },
   // Commandes - Entête
   commandes_entete: {
@@ -129,6 +131,12 @@ export const DEFAULT_MAPPINGS: Record<string, Record<string, string>> = {
     id: 'ID',
     nom: 'Nom',
   },
+  // Table Majoration (id -> taux)
+  // La table Clients contient une colonne Majoration qui référence l'ID de cette table
+  majoration: {
+    id: 'ID',
+    taux: 'Taux',
+  },
 };
 
 export interface DmsTableInfo {
@@ -202,6 +210,7 @@ export class DmsMappingService {
         bl_detail: 'BonsLivraison_Lignes',
         tva: 'TVA',
         positions: 'Positions',
+        majoration: 'Majoration',
       };
       return {
         tableName: defaultTableNames[mappingType] || mappingType,

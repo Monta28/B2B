@@ -37,7 +37,7 @@ export const Dashboard = () => {
     return { pending, validated, preparation, shipped, inProgress };
   }, [orders]);
 
-  // Calculate document statistics (invoices this month)
+  // Calculate document statistics (invoices and BL this month)
   const docStats = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -52,7 +52,16 @@ export const Dashboard = () => {
     const totalHT = invoicesThisMonth.reduce((sum: number, d: any) => sum + (d.totalHT || 0), 0);
     const count = invoicesThisMonth.length;
 
-    return { totalHT, count, totalInvoices: invoices.length };
+    // BL (Bons de Livraison) statistics
+    const bls = documents.filter((d: any) => d.type === 'BL');
+    const blsThisMonth = bls.filter((d: any) => {
+      const docDate = new Date(d.date);
+      return docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear;
+    });
+    const blCount = blsThisMonth.length;
+    const blTotalHT = blsThisMonth.reduce((sum: number, d: any) => sum + (d.totalHT || 0), 0);
+
+    return { totalHT, count, totalInvoices: invoices.length, blCount, blTotalHT, totalBLs: bls.length };
   }, [documents]);
 
   const getNewsIcon = (type: NewsType) => {
@@ -140,26 +149,32 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {/* Card 3 - Remise globale */}
+        {/* Card 3 - Bons de livraison du mois */}
         <div className="card-futuristic p-7 rounded-2xl group">
           <div className="flex justify-between items-start">
-             <div className="p-3.5 bg-neon-green/20 rounded-2xl text-neon-green group-hover:bg-neon-green group-hover:text-white transition-colors duration-300">
-               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             <div className="p-3.5 bg-neon-cyan/20 rounded-2xl text-neon-cyan group-hover:bg-neon-cyan group-hover:text-white transition-colors duration-300">
+               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
              </div>
+             {docStats.blCount > 0 && (
+               <span className="flex h-3 w-3 relative">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-cyan opacity-75"></span>
+                 <span className="relative inline-flex rounded-full h-3 w-3 bg-neon-cyan"></span>
+               </span>
+             )}
           </div>
           <div className="mt-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Remise Globale</h3>
-            <p className="text-4xl font-extrabold text-neon-green mt-2 tracking-tight">
-              {user?.globalDiscount ? `-${user.globalDiscount}%` : '0%'}
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Bons de Livraison (Mois)</h3>
+            <p className="text-4xl font-extrabold text-white mt-2 tracking-tight">
+              {documentsLoading ? '...' : docStats.blCount}
             </p>
           </div>
-          <div className="mt-6 pt-4 border-t border-neon-green/10 flex justify-between items-center">
-            <span className="text-xs text-slate-400">Votre remise appliquée</span>
-            {user?.globalDiscount && user.globalDiscount > 0 ? (
-              <span className="text-xs font-bold bg-neon-green/20 text-neon-green px-2 py-1 rounded border border-neon-green/30">ACTIVE</span>
-            ) : (
-              <span className="text-xs font-bold bg-slate-700/50 text-slate-400 px-2 py-1 rounded border border-slate-600">AUCUNE</span>
-            )}
+          <div className="mt-6 pt-4 border-t border-neon-cyan/10 flex justify-between items-center">
+            <span className="text-xs font-medium text-slate-400 bg-neon-cyan/10 px-2 py-1 rounded">
+              {docStats.totalBLs > 0 ? `${docStats.totalBLs} BL au total` : 'Aucun BL'}
+            </span>
+            <Link to="/documents" className="text-sm font-semibold text-neon-cyan hover:text-neon-cyan/80 flex items-center group-hover:translate-x-1 transition-transform">
+              Voir BL <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </Link>
           </div>
         </div>
       </div>

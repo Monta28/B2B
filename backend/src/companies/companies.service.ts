@@ -5,6 +5,7 @@ import { Company } from '../entities/company.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { CreateCompanyDto, UpdateCompanyDto } from './dto/create-company.dto';
 import { AppConfigService } from '../config/app-config.service';
+import { DmsMappingService } from '../dms-mapping/dms-mapping.service';
 
 // Interface for DMS Client data
 export interface DmsClient {
@@ -14,6 +15,8 @@ export interface DmsClient {
   telephone: string;
   email: string;
   tauxRemise: number;
+  typeRemise: number;
+  tauxMajoration: number | null; // Taux de majoration (si typeRemise = 2 ou 4)
 }
 
 // DTO for bulk import
@@ -24,6 +27,8 @@ export interface ImportClientDto {
   telephone: string;
   email: string;
   tauxRemise: number;
+  typeRemise: number;
+  tauxMajoration: number | null;
 }
 
 @Injectable()
@@ -34,6 +39,7 @@ export class CompaniesService {
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
     private appConfigService: AppConfigService,
+    private dmsMappingService: DmsMappingService,
   ) {}
 
   async findAll(): Promise<Company[]> {
@@ -140,7 +146,7 @@ export class CompaniesService {
     return { message: 'Entreprise supprimée avec succès' };
   }
 
-  // Get clients from DMS SQL Server
+  // Get clients from DMS SQL Server using configured DMS mappings
   async getDmsClients(): Promise<{ success: boolean; clients?: DmsClient[]; message?: string }> {
     const pool = await this.appConfigService.getSqlConnection();
 
@@ -152,19 +158,104 @@ export class CompaniesService {
     }
 
     try {
-      // Query to get clients from DMS - using actual MGSS_CommDB schema
-      const result = await pool.request().query(`
+      // Get DMS mapping configuration for clients and majoration tables
+      const clientsMapping = await this.dmsMappingService.getMappingConfig('clients');
+      const majorationMapping = await this.dmsMappingService.getMappingConfig('majoration');
+
+      if (!clientsMapping) {
+        await pool.close();
+        return {
+          success: false,
+          message: 'Configuration de mapping clients non trouvée.',
+        };
+      }
+
+      // Get column names from user's configuration
+      const clientTable = clientsMapping.tableName;
+      const cols = clientsMapping.columns;
+
+      const codeClientCol = cols.codeClient || 'Code_Client';
+      const raisonSocialeCol = cols.raisonSociale || 'Raison_Social';
+      const codeTvaCol = cols.codeTva || 'Code_Tva';
+      const telephoneCol = cols.telephone || 'Telephone';
+      const emailCol = cols.email || 'Mail';
+      const tauxRemiseCol = cols.tauxRemise || 'Remise';
+      const typeRemiseCol = cols.typeRemise || 'Type_Remise';
+      const tauxMajorationCol = cols.tauxMajoration || 'Majoration';
+
+      // Majoration table columns (for JOIN)
+      let majorationTable = 'Majoration';
+      let majorationIdCol = 'ID';
+      let majorationTauxCol = 'Taux';
+
+      if (majorationMapping) {
+        majorationTable = majorationMapping.tableName;
+        majorationIdCol = majorationMapping.columns.id || 'ID';
+        majorationTauxCol = majorationMapping.columns.taux || 'Taux';
+      }
+
+      let result;
+
+      // Query 1: Full query with Majoration join and Type_Remise column
+      const fullQuery = `
         SELECT
-          RTRIM(LTRIM(ISNULL(Code_Client, ''))) as codeClient,
-          RTRIM(LTRIM(ISNULL(Raison_Social, ''))) as raisonSociale,
-          RTRIM(LTRIM(ISNULL(Code_Tva, ''))) as codeTva,
-          RTRIM(LTRIM(ISNULL(Telephone, ''))) as telephone,
-          RTRIM(LTRIM(ISNULL(Mail, ''))) as email,
-          ISNULL(Remise, 0) as tauxRemise
-        FROM Clients
-        WHERE Code_Client IS NOT NULL AND Code_Client != ''
-        ORDER BY Raison_Social
-      `);
+          RTRIM(LTRIM(ISNULL(c.[${codeClientCol}], ''))) as codeClient,
+          RTRIM(LTRIM(ISNULL(c.[${raisonSocialeCol}], ''))) as raisonSociale,
+          RTRIM(LTRIM(ISNULL(c.[${codeTvaCol}], ''))) as codeTva,
+          RTRIM(LTRIM(ISNULL(c.[${telephoneCol}], ''))) as telephone,
+          RTRIM(LTRIM(ISNULL(c.[${emailCol}], ''))) as email,
+          ISNULL(c.[${tauxRemiseCol}], 0) as tauxRemise,
+          ISNULL(c.[${typeRemiseCol}], 0) as typeRemise,
+          CASE WHEN c.[${typeRemiseCol}] IN (2, 4) THEN m.[${majorationTauxCol}] ELSE NULL END as tauxMajoration
+        FROM [${clientTable}] c
+        LEFT JOIN [${majorationTable}] m ON c.[${tauxMajorationCol}] = m.[${majorationIdCol}]
+        WHERE c.[${codeClientCol}] IS NOT NULL AND c.[${codeClientCol}] != ''
+        ORDER BY c.[${raisonSocialeCol}]
+      `;
+
+      // Query 2: Without Majoration table but with Type_Remise
+      const noMajorationQuery = `
+        SELECT
+          RTRIM(LTRIM(ISNULL(c.[${codeClientCol}], ''))) as codeClient,
+          RTRIM(LTRIM(ISNULL(c.[${raisonSocialeCol}], ''))) as raisonSociale,
+          RTRIM(LTRIM(ISNULL(c.[${codeTvaCol}], ''))) as codeTva,
+          RTRIM(LTRIM(ISNULL(c.[${telephoneCol}], ''))) as telephone,
+          RTRIM(LTRIM(ISNULL(c.[${emailCol}], ''))) as email,
+          ISNULL(c.[${tauxRemiseCol}], 0) as tauxRemise,
+          ISNULL(c.[${typeRemiseCol}], 0) as typeRemise,
+          NULL as tauxMajoration
+        FROM [${clientTable}] c
+        WHERE c.[${codeClientCol}] IS NOT NULL AND c.[${codeClientCol}] != ''
+        ORDER BY c.[${raisonSocialeCol}]
+      `;
+
+      // Query 3: Basic query without Type_Remise and Majoration (fallback)
+      const basicQuery = `
+        SELECT
+          RTRIM(LTRIM(ISNULL(c.[${codeClientCol}], ''))) as codeClient,
+          RTRIM(LTRIM(ISNULL(c.[${raisonSocialeCol}], ''))) as raisonSociale,
+          RTRIM(LTRIM(ISNULL(c.[${codeTvaCol}], ''))) as codeTva,
+          RTRIM(LTRIM(ISNULL(c.[${telephoneCol}], ''))) as telephone,
+          RTRIM(LTRIM(ISNULL(c.[${emailCol}], ''))) as email,
+          ISNULL(c.[${tauxRemiseCol}], 0) as tauxRemise,
+          0 as typeRemise,
+          NULL as tauxMajoration
+        FROM [${clientTable}] c
+        WHERE c.[${codeClientCol}] IS NOT NULL AND c.[${codeClientCol}] != ''
+        ORDER BY c.[${raisonSocialeCol}]
+      `;
+
+      // Try queries in order: full -> no majoration -> basic
+      try {
+        result = await pool.request().query(fullQuery);
+      } catch (err1: any) {
+        try {
+          result = await pool.request().query(noMajorationQuery);
+        } catch (err2: any) {
+          // Fall back to basic query without Type_Remise
+          result = await pool.request().query(basicQuery);
+        }
+      }
 
       await pool.close();
 
@@ -177,6 +268,8 @@ export class CompaniesService {
           telephone: row.telephone || '',
           email: row.email || '',
           tauxRemise: parseInt(row.tauxRemise) || 0,
+          typeRemise: parseInt(row.typeRemise) || 0,
+          tauxMajoration: row.tauxMajoration !== null ? parseFloat(row.tauxMajoration) : null,
         })),
       };
     } catch (error: any) {
@@ -189,26 +282,53 @@ export class CompaniesService {
   }
 
   // Import multiple clients from DMS
-  async importClients(clients: ImportClientDto[], currentUserId: string, ipAddress?: string): Promise<{ imported: number; skipped: number; errors: string[] }> {
+  async importClients(clients: ImportClientDto[], currentUserId: string, ipAddress?: string): Promise<{ imported: number; updated: number; skipped: number; errors: string[] }> {
     const errors: string[] = [];
     let imported = 0;
+    let updated = 0;
     let skipped = 0;
 
-    // Get existing DMS codes
-    const existingCodes = await this.companyRepository.find({
-      select: ['dmsClientCode'],
+    // Get existing companies by DMS code
+    const existingCompanies = await this.companyRepository.find({
+      select: ['id', 'dmsClientCode', 'typeRemise', 'tauxMajoration', 'globalDiscount'],
     });
-    const existingCodeSet = new Set(existingCodes.map(c => c.dmsClientCode));
+    const existingCodeMap = new Map(existingCompanies.map(c => [c.dmsClientCode, c]));
 
     for (const client of clients) {
       try {
-        // Skip if already exists
-        if (existingCodeSet.has(client.codeClient)) {
-          skipped++;
+        const existingCompany = existingCodeMap.get(client.codeClient);
+
+        if (existingCompany) {
+          // Update existing company with typeRemise and tauxMajoration if changed
+          const needsUpdate =
+            existingCompany.typeRemise !== client.typeRemise ||
+            existingCompany.tauxMajoration !== client.tauxMajoration ||
+            existingCompany.globalDiscount !== client.tauxRemise;
+
+          if (needsUpdate) {
+            await this.companyRepository.update(existingCompany.id, {
+              typeRemise: client.typeRemise,
+              tauxMajoration: client.tauxMajoration,
+              globalDiscount: client.tauxRemise,
+            });
+
+            // Audit log for update
+            await this.logAuditAction(currentUserId, 'UPDATE_COMPANY_DMS', 'Company', existingCompany.id, {
+              dmsClientCode: client.codeClient,
+              typeRemise: client.typeRemise,
+              tauxMajoration: client.tauxMajoration,
+              globalDiscount: client.tauxRemise,
+              source: 'DMS_SYNC',
+            }, ipAddress);
+
+            updated++;
+          } else {
+            skipped++;
+          }
           continue;
         }
 
-        // Create company
+        // Create new company
         const company = this.companyRepository.create({
           name: client.raisonSociale,
           dmsClientCode: client.codeClient,
@@ -216,11 +336,13 @@ export class CompaniesService {
           phone: client.telephone,
           emailContact: client.email,
           globalDiscount: client.tauxRemise,
+          typeRemise: client.typeRemise,
+          tauxMajoration: client.tauxMajoration,
           isActive: true,
         });
 
         const savedCompany = await this.companyRepository.save(company);
-        existingCodeSet.add(client.codeClient);
+        existingCodeMap.set(client.codeClient, savedCompany);
 
         // Audit log
         await this.logAuditAction(currentUserId, 'IMPORT_COMPANY', 'Company', savedCompany.id, {
@@ -235,7 +357,7 @@ export class CompaniesService {
       }
     }
 
-    return { imported, skipped, errors };
+    return { imported, updated, skipped, errors };
   }
 
   // Bulk delete companies

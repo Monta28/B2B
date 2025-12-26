@@ -10,7 +10,8 @@ export type DmsMappingType =
   | 'bl_entete'
   | 'bl_detail'
   | 'tva'
-  | 'positions'; // Table des positions/emplacements
+  | 'positions' // Table des positions/emplacements
+  | 'majoration'; // Table des majorations (id -> taux)
 
 @Entity('dms_mappings')
 export class DmsMapping {

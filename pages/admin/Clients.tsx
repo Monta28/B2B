@@ -18,6 +18,8 @@ interface DmsClient {
   telephone: string;
   email: string;
   tauxRemise: number;
+  typeRemise: number;
+  tauxMajoration: number | null;
 }
 
 export const Clients = () => {
@@ -68,7 +70,7 @@ export const Clients = () => {
   const [isLoadingDms, setIsLoadingDms] = useState(false);
   const [dmsError, setDmsError] = useState<string | null>(null);
   const [editingRemise, setEditingRemise] = useState<{ code: string; value: number } | null>(null);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ imported: number; updated: number; skipped: number; errors: string[] } | null>(null);
 
   // Import Modal - Column filtering and infinite scroll
   const [importFilters, setImportFilters] = useState({
@@ -78,6 +80,7 @@ export const Clients = () => {
     telephone: '',
     email: '',
     tauxRemise: '',
+    tauxMajoration: '',
   });
   const [importDisplayCount, setImportDisplayCount] = useState(ITEMS_PER_PAGE);
   const importTableContainerRef = useRef<HTMLDivElement>(null);
@@ -158,6 +161,12 @@ export const Clients = () => {
     }
   };
 
+  // Set of existing DMS codes (for marking in modal)
+  const existingDmsCodes = useMemo(() =>
+    new Set(companies?.map(c => c.dmsClientCode) || []),
+    [companies]
+  );
+
   const openImportModal = async () => {
     setIsImportModalOpen(true);
     setDmsError(null);
@@ -169,10 +178,8 @@ export const Clients = () => {
     try {
       const result = await api.admin.getDmsClients();
       if (result.success && result.clients) {
-        // Filter out clients already imported
-        const existingCodes = new Set(companies?.map(c => c.dmsClientCode) || []);
-        const availableClients = result.clients.filter(c => !existingCodes.has(c.codeClient));
-        setDmsClients(availableClients);
+        // Show all clients (existing ones can be updated with new majoration/remise data)
+        setDmsClients(result.clients);
       } else {
         setDmsError(result.message || 'Erreur lors du chargement des clients DMS');
       }
@@ -347,6 +354,12 @@ export const Clients = () => {
           return false;
         }
       }
+      if (importFilters.tauxMajoration) {
+        const majorationValue = parseFloat(importFilters.tauxMajoration);
+        if (!isNaN(majorationValue) && c.tauxMajoration !== majorationValue) {
+          return false;
+        }
+      }
       return true;
     });
   }, [dmsClients, importFilters]);
@@ -449,16 +462,17 @@ export const Clients = () => {
       <div className="card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 200px)', maxHeight: 'calc(100vh - 200px)' }}>
         {/* Fixed header with filters */}
         <div className="flex-shrink-0 overflow-x-auto">
-          <table className="w-full text-left table-fixed" style={{ minWidth: '1100px' }}>
+          <table className="w-full text-left table-fixed" style={{ minWidth: '1200px' }}>
             <colgroup>
               <col style={{ width: '40px' }} />
-              <col style={{ width: '200px' }} />
-              <col style={{ width: '120px' }} />
               <col style={{ width: '180px' }} />
-              <col style={{ width: '120px' }} />
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '160px' }} />
+              <col style={{ width: '110px' }} />
+              <col style={{ width: '80px' }} />
+              <col style={{ width: '100px' }} />
               <col style={{ width: '80px' }} />
               <col style={{ width: '90px' }} />
-              <col style={{ width: '100px' }} />
               <col style={{ width: '70px' }} />
             </colgroup>
             <thead className="bg-brand-900/50 border-b border-accent/10">
@@ -488,6 +502,9 @@ export const Clients = () => {
                 </th>
                 <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-brand-800/40 select-none" onClick={() => handleSort('globalDiscount')}>
                   Remise <SortIcon columnKey="globalDiscount" />
+                </th>
+                <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Majoration
                 </th>
                 <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-center cursor-pointer hover:bg-brand-800/40 select-none" onClick={() => handleSort('users')}>
                   Users <SortIcon columnKey="users" />
@@ -545,6 +562,7 @@ export const Clients = () => {
                     className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
                   />
                 </th>
+                <th className="px-3 py-2"></th>
                 <th className="px-3 py-2">
                   <input
                     type="text"
@@ -577,24 +595,25 @@ export const Clients = () => {
           onScroll={handleScroll}
           className="overflow-y-auto flex-1 overflow-x-auto"
         >
-          <table className="w-full text-left table-fixed" style={{ minWidth: '1100px' }}>
+          <table className="w-full text-left table-fixed" style={{ minWidth: '1200px' }}>
             <colgroup>
               <col style={{ width: '40px' }} />
-              <col style={{ width: '200px' }} />
-              <col style={{ width: '120px' }} />
               <col style={{ width: '180px' }} />
-              <col style={{ width: '120px' }} />
+              <col style={{ width: '100px' }} />
+              <col style={{ width: '160px' }} />
+              <col style={{ width: '110px' }} />
+              <col style={{ width: '80px' }} />
+              <col style={{ width: '100px' }} />
               <col style={{ width: '80px' }} />
               <col style={{ width: '90px' }} />
-              <col style={{ width: '100px' }} />
               <col style={{ width: '70px' }} />
             </colgroup>
             <tbody className="divide-y divide-accent/10">
               {isLoading ? (
-                <tr><td colSpan={9} className="text-center py-8 text-slate-400">Chargement...</td></tr>
+                <tr><td colSpan={10} className="text-center py-8 text-slate-400">Chargement...</td></tr>
               ) : filteredCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12">
+                  <td colSpan={10} className="text-center py-12">
                     <div className="text-slate-400">
                       <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -635,6 +654,13 @@ export const Clients = () => {
                         </span>
                       ) : <span className="text-xs text-slate-400">0%</span>}
                     </td>
+                    <td className="px-3 py-3">
+                      {company.typeRemise && [2, 4].includes(company.typeRemise) && company.tauxMajoration !== null ? (
+                        <span className="text-xs font-bold text-neon-orange bg-neon-orange/15 border border-neon-orange/30 px-2 py-1 rounded">
+                          +{company.tauxMajoration}%
+                        </span>
+                      ) : <span className="text-xs text-slate-500">-</span>}
+                    </td>
                     <td className="px-3 py-3 text-center">
                       {company.users && company.users.length > 0 ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent border border-accent/20">
@@ -673,7 +699,7 @@ export const Clients = () => {
               {/* Loading more indicator */}
               {displayCount < filteredCompanies.length && (
                 <tr>
-                  <td colSpan={9} className="text-center py-4 text-slate-400">
+                  <td colSpan={10} className="text-center py-4 text-slate-400">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent mr-2"></div>
                       Défilez pour charger plus...
@@ -995,8 +1021,11 @@ export const Clients = () => {
                     <p className="font-bold text-lg">Importation terminée</p>
                     <div className="mt-3 text-sm space-y-1">
                       <p><span className="font-semibold">{importResult.imported}</span> client(s) importé(s)</p>
+                      {importResult.updated > 0 && (
+                        <p className="text-neon-cyan"><span className="font-semibold">{importResult.updated}</span> client(s) mis à jour (majoration/remise)</p>
+                      )}
                       {importResult.skipped > 0 && (
-                        <p className="text-neon-orange"><span className="font-semibold">{importResult.skipped}</span> client(s) ignoré(s) (déjà existants)</p>
+                        <p className="text-slate-400"><span className="font-semibold">{importResult.skipped}</span> client(s) inchangés</p>
                       )}
                       {importResult.errors.length > 0 && (
                         <div className="text-neon-pink mt-2">
@@ -1031,14 +1060,15 @@ export const Clients = () => {
                 <>
                   {/* Fixed header with filters */}
                   <div className="flex-shrink-0 overflow-x-auto">
-                    <table className="w-full text-left text-sm table-fixed" style={{ minWidth: '900px' }}>
+                    <table className="w-full text-left text-sm table-fixed" style={{ minWidth: '1000px' }}>
                       <colgroup>
                         <col style={{ width: '40px' }} />
                         <col style={{ width: '120px' }} />
-                        <col style={{ width: '200px' }} />
+                        <col style={{ width: '180px' }} />
                         <col style={{ width: '120px' }} />
                         <col style={{ width: '120px' }} />
                         <col style={{ width: '160px' }} />
+                        <col style={{ width: '80px' }} />
                         <col style={{ width: '100px' }} />
                       </colgroup>
                       <thead className="bg-brand-900/50 border-b border-accent/10">
@@ -1058,6 +1088,7 @@ export const Clients = () => {
                           <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Téléphone</th>
                           <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
                           <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Remise</th>
+                          <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Majoration</th>
                         </tr>
                         {/* Filter row */}
                         <tr className="bg-brand-900/40">
@@ -1116,6 +1147,15 @@ export const Clients = () => {
                               className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
                             />
                           </th>
+                          <th className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="%"
+                              value={importFilters.tauxMajoration}
+                              onChange={e => setImportFilters(f => ({ ...f, tauxMajoration: e.target.value }))}
+                              className="w-full text-xs border border-accent/20 bg-brand-800/60 text-slate-100 placeholder-slate-500 rounded px-2 py-1 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                            />
+                          </th>
                         </tr>
                       </thead>
                     </table>
@@ -1128,20 +1168,21 @@ export const Clients = () => {
                     className="overflow-y-auto flex-1 overflow-x-auto"
                     style={{ maxHeight: '350px' }}
                   >
-                    <table className="w-full text-left text-sm table-fixed" style={{ minWidth: '900px' }}>
+                    <table className="w-full text-left text-sm table-fixed" style={{ minWidth: '1000px' }}>
                       <colgroup>
                         <col style={{ width: '40px' }} />
                         <col style={{ width: '120px' }} />
-                        <col style={{ width: '200px' }} />
+                        <col style={{ width: '180px' }} />
                         <col style={{ width: '120px' }} />
                         <col style={{ width: '120px' }} />
                         <col style={{ width: '160px' }} />
+                        <col style={{ width: '80px' }} />
                         <col style={{ width: '100px' }} />
                       </colgroup>
                       <tbody className="divide-y divide-accent/10">
                         {filteredDmsClients.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="text-center py-12">
+                            <td colSpan={8} className="text-center py-12">
                               <div className="text-slate-400">
                                 <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1165,9 +1206,16 @@ export const Clients = () => {
                               />
                             </td>
                             <td className="px-3 py-3">
-                              <span className="font-mono text-accent bg-accent/10 border border-accent/20 px-2 py-1 rounded text-xs">
-                                {client.codeClient}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-accent bg-accent/10 border border-accent/20 px-2 py-1 rounded text-xs">
+                                  {client.codeClient}
+                                </span>
+                                {existingDmsCodes.has(client.codeClient) && (
+                                  <span className="text-[10px] font-bold bg-neon-cyan/20 text-neon-cyan px-1.5 py-0.5 rounded border border-neon-cyan/30">
+                                    MAJ
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-3 py-3 font-medium text-slate-100 truncate" title={client.raisonSociale}>{client.raisonSociale}</td>
                             <td className="px-3 py-3 text-slate-300">{client.codeTva || '-'}</td>
@@ -1202,12 +1250,19 @@ export const Clients = () => {
                                 </button>
                               )}
                             </td>
+                            <td className="px-3 py-3">
+                              {client.tauxMajoration !== null ? (
+                                <span className="text-xs font-bold text-neon-orange bg-neon-orange/15 border border-neon-orange/30 px-2 py-1 rounded">
+                                  +{client.tauxMajoration}%
+                                </span>
+                              ) : <span className="text-xs text-slate-500">-</span>}
+                            </td>
                           </tr>
                         ))}
                         {/* Loading more indicator */}
                         {importDisplayCount < filteredDmsClients.length && (
                           <tr>
-                            <td colSpan={7} className="text-center py-4 text-slate-400">
+                            <td colSpan={8} className="text-center py-4 text-slate-400">
                               <div className="flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent mr-2"></div>
                                 Défilez pour charger plus...
@@ -1229,7 +1284,7 @@ export const Clients = () => {
                     </span>
                     {hasActiveImportFilters && (
                       <button
-                        onClick={() => setImportFilters({ codeClient: '', raisonSociale: '', codeTva: '', telephone: '', email: '', tauxRemise: '' })}
+                        onClick={() => setImportFilters({ codeClient: '', raisonSociale: '', codeTva: '', telephone: '', email: '', tauxRemise: '', tauxMajoration: '' })}
                         className="text-xs text-neon-pink hover:text-neon-pink/80 flex items-center gap-1"
                       >
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

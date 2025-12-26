@@ -72,7 +72,9 @@ export class AuthService {
         companyId: user.company?.id,
         companyName: user.company?.name || 'MECACOMM HQ',
         dmsClientCode: user.dmsClientCode,
-        globalDiscount: user.company?.globalDiscount || 0,
+        globalDiscount: user.company?.globalDiscount ? parseFloat(String(user.company.globalDiscount)) : 0,
+        typeRemise: user.company?.typeRemise || 0,
+        tauxMajoration: user.company?.tauxMajoration ? parseFloat(String(user.company.tauxMajoration)) : null,
       },
     };
   }
@@ -100,7 +102,9 @@ export class AuthService {
       companyId: user.company?.id,
       companyName: user.company?.name || 'MECACOMM HQ',
       dmsClientCode: user.dmsClientCode,
-      globalDiscount: user.company?.globalDiscount || 0,
+      globalDiscount: user.company?.globalDiscount ? parseFloat(String(user.company.globalDiscount)) : 0,
+      typeRemise: user.company?.typeRemise || 0,
+      tauxMajoration: user.company?.tauxMajoration ? parseFloat(String(user.company.tauxMajoration)) : null,
     };
   }
 

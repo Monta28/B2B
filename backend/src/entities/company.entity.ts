@@ -22,6 +22,12 @@ export class Company {
   @Column({ name: 'global_discount', type: 'decimal', precision: 5, scale: 2, default: 0 })
   globalDiscount: number;
 
+  @Column({ name: 'type_remise', type: 'int', default: 0 })
+  typeRemise: number;
+
+  @Column({ name: 'taux_majoration', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  tauxMajoration: number | null;
+
   @Column({ type: 'text', nullable: true })
   address: string;
 

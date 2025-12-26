@@ -72,21 +72,24 @@ export const QuickOrder = () => {
     enabled: hasSearch && !selectedProduct,
   });
 
-  // 2. Calculate Price when product selected using client's globalDiscount
+  // Check if client has majoration (typeRemise 2 or 4)
+  const hasMajoration = user?.typeRemise && [2, 4].includes(user.typeRemise) && user?.tauxMajoration && user.tauxMajoration > 0;
+  const majorationRate = hasMajoration ? user.tauxMajoration : 0;
+
+  // 2. Calculate Price when product selected (apply majoration if applicable)
   useEffect(() => {
     if (selectedProduct) {
-      // Use priceHT from selected product and calculate net price with user's globalDiscount
-      const priceHT = selectedProduct.priceHT || selectedProduct.pricePublic || 0;
-      const clientDiscount = user?.globalDiscount || 0;
-      const netPrice = priceHT * (1 - clientDiscount / 100);
+      // Use priceHT from selected product and apply majoration if client has typeRemise 2 or 4
+      const basePriceHT = selectedProduct.priceHT || selectedProduct.pricePublic || 0;
+      const priceHT = basePriceHT * (1 + majorationRate / 100);
 
       setActivePrice({
         reference: selectedProduct.reference,
         priceHT,
-        publicPrice: priceHT,
-        netPrice,
-        discountPercent: clientDiscount,
-        discountPercentage: clientDiscount,
+        publicPrice: basePriceHT,
+        netPrice: priceHT,
+        discountPercent: 0,
+        discountPercentage: 0,
         tvaRate: selectedProduct.tvaRate ?? null,
         tvaCode: selectedProduct.codeTva || selectedProduct.tvaCode || null,
       });
@@ -99,7 +102,7 @@ export const QuickOrder = () => {
     } else {
       setActivePrice(null);
     }
-  }, [selectedProduct, user?.globalDiscount]);
+  }, [selectedProduct, majorationRate]);
 
   // Show dropdown when we have results
   useEffect(() => {
@@ -420,9 +423,9 @@ export const QuickOrder = () => {
             </div>
           </div>
 
-          {/* Prix Net */}
+          {/* Prix HT */}
           <div className="md:col-span-1">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Prix Net</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Prix HT</label>
             <div className="w-full px-3 py-2 bg-brand-900/50 border border-accent/20 rounded-lg font-mono text-right text-accent text-sm h-[38px] flex items-center justify-end">
               {activePrice ? formatPrice(activePrice.netPrice) : '-'}
             </div>
@@ -514,23 +517,16 @@ export const QuickOrder = () => {
                   {/* Prix HT + TVA section */}
                   <div className="flex items-center gap-3 text-xs">
                     {(() => {
-                      const priceHT = p.priceHT || p.pricePublic || 0;
+                      const basePriceHT = p.priceHT || p.pricePublic || 0;
                       const tvaRate = p.tvaRate;
-                      const clientDiscount = user?.globalDiscount || 0;
-                      const calculatedNetPrice = priceHT * (1 - clientDiscount / 100);
+                      const finalPriceHT = basePriceHT * (1 + majorationRate / 100);
                       return (
                         <>
-                          <div className="text-right">
-                            <span className="text-slate-500">{formatPrice(priceHT)} HT</span>
-                            {tvaRate != null && (
-                              <span className="ml-1 text-neon-orange font-bold">TVA {tvaRate}%</span>
-                            )}
-                            {clientDiscount > 0 && (
-                              <span className="ml-1 text-accent font-bold">-{clientDiscount}%</span>
-                            )}
-                          </div>
-                          <div className="bg-neon-green/10 border border-neon-green/30 px-2 py-1 rounded">
-                            <span className="text-neon-green font-bold">{formatPrice(calculatedNetPrice)}</span>
+                          {tvaRate != null && (
+                            <span className="text-neon-orange font-bold">TVA {tvaRate}%</span>
+                          )}
+                          <div className="bg-accent/10 border border-accent/30 px-2 py-1 rounded">
+                            <span className="text-accent font-bold">{formatPrice(finalPriceHT)}</span>
                           </div>
                         </>
                       );
@@ -561,7 +557,7 @@ export const QuickOrder = () => {
                    <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase w-[32%]">Ref / Produit</th>
                   <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[12%]">Dispo.</th>
                   <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[8%]">Qté</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">P.U. Net</th>
+                  <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">P.U. HT</th>
                   <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-right w-[14%]">Total HT</th>
                   <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase text-center w-[10%]">TVA</th>
                   <th className="px-4 py-3 w-[10%]"></th>

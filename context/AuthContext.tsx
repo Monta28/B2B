@@ -33,6 +33,8 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
             companyName: profile.companyName,
             dmsClientCode: profile.dmsClientCode,
             globalDiscount: profile.globalDiscount || 0,
+            typeRemise: profile.typeRemise,
+            tauxMajoration: profile.tauxMajoration,
           });
         } catch (error) {
           // Token invalid or expired
@@ -59,6 +61,8 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
         companyName: response.user.companyName,
         dmsClientCode: response.user.dmsClientCode,
         globalDiscount: response.user.globalDiscount || 0,
+        typeRemise: response.user.typeRemise,
+        tauxMajoration: response.user.tauxMajoration,
       };
 
       setUser(userData);

@@ -60,6 +60,8 @@ export interface User {
   role: UserRole;
   isActive?: boolean;
   globalDiscount?: number; // Remise client en %
+  typeRemise?: number; // Type de remise (0, 1, 2, 3, 4)
+  tauxMajoration?: number | null; // Taux majoration (si typeRemise = 2 ou 4)
 }
 
 export interface Company {
@@ -68,9 +70,13 @@ export interface Company {
   dmsClientCode: string;
   siret: string;
   emailContact: string;
+  phone?: string;
   isActive: boolean;
   createdAt: string;
   globalDiscount?: number; // Remise globale en %
+  typeRemise?: number; // Type de remise (0, 1, 2, 3, 4)
+  tauxMajoration?: number | null; // Taux majoration (si typeRemise = 2 ou 4)
+  users?: { id: string; fullName: string }[];
 }
 
 export interface Product {

@@ -17,7 +17,8 @@ type DmsMappingType =
   | 'bl_entete'
   | 'bl_detail'
   | 'tva'
-  | 'positions';
+  | 'positions'
+  | 'majoration';
 
 interface DmsColumnInfo {
   name: string;
@@ -38,6 +39,7 @@ const MAPPING_TYPE_LABELS: Record<DmsMappingType, string> = {
   bl_detail: 'Bons de Livraison (Détail)',
   tva: 'Table TVA',
   positions: 'Positions / Emplacements',
+  majoration: 'Table Majoration',
 };
 
 // Default field labels for each mapping type
@@ -64,6 +66,8 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
     telephone: 'Téléphone',
     email: 'Email',
     tauxRemise: 'Taux Remise (%)',
+    typeRemise: 'Type Remise',
+    tauxMajoration: 'Taux Majoration (ID → table Majoration)',
   },
   // Commandes - Entête
   commandes_entete: {
@@ -146,6 +150,10 @@ const MAPPING_LABELS: Record<DmsMappingType, Record<string, string>> = {
   positions: {
     id: 'ID Position',
     nom: 'Nom Position',
+  },
+  majoration: {
+    id: 'ID Majoration',
+    taux: 'Taux (%)',
   },
 };
 

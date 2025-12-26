@@ -369,13 +369,12 @@ export const Catalog = () => {
           <div className="flex-shrink-0 overflow-x-auto lg:overflow-x-hidden">
             <table className="w-full text-left table-fixed min-w-[800px] lg:min-w-0">
               <colgroup>
-                <col className="w-[120px] lg:w-[11%]" />
-                <col className="w-[120px] lg:w-[11%]" />
+                <col className="w-[120px] lg:w-[12%]" />
+                <col className="w-[120px] lg:w-[12%]" />
                 <col className="w-auto" />
                 <col className="w-[100px] lg:w-[10%]" />
-                <col className="w-[90px] lg:w-[9%]" />
+                <col className="w-[100px] lg:w-[10%]" />
                 <col className="w-[70px] lg:w-[7%]" />
-                {!isInternal && <col className="w-[100px] lg:w-[10%]" />}
                 {!isInternal && <col className="w-[120px] lg:w-[12%]" />}
               </colgroup>
               <thead className="bg-brand-900/50 border-b border-accent/10">
@@ -414,11 +413,6 @@ export const Catalog = () => {
                   <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
                     TVA
                   </th>
-                  {!isInternal && (
-                    <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">
-                      Prix Net
-                    </th>
-                  )}
                   {!isInternal && (
                     <th className="px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">
                       Action
@@ -476,7 +470,6 @@ export const Catalog = () => {
                   </th>
                   <th className="px-3 py-2"></th>
                   {!isInternal && <th className="px-3 py-2"></th>}
-                  {!isInternal && <th className="px-3 py-2"></th>}
                 </tr>
               </thead>
             </table>
@@ -489,13 +482,12 @@ export const Catalog = () => {
           >
             <table className="w-full text-left table-fixed min-w-[800px] lg:min-w-0">
               <colgroup>
-                <col className="w-[120px] lg:w-[11%]" />
-                <col className="w-[120px] lg:w-[11%]" />
+                <col className="w-[120px] lg:w-[12%]" />
+                <col className="w-[120px] lg:w-[12%]" />
                 <col className="w-auto" />
                 <col className="w-[100px] lg:w-[10%]" />
-                <col className="w-[90px] lg:w-[9%]" />
+                <col className="w-[100px] lg:w-[10%]" />
                 <col className="w-[70px] lg:w-[7%]" />
-                {!isInternal && <col className="w-[100px] lg:w-[10%]" />}
                 {!isInternal && <col className="w-[120px] lg:w-[12%]" />}
               </colgroup>
               <tbody className="divide-y divide-accent/10">
@@ -505,7 +497,7 @@ export const Catalog = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={isInternal ? 6 : 8} className="px-6 py-16 text-center text-slate-500">
+                    <td colSpan={isInternal ? 6 : 7} className="px-6 py-16 text-center text-slate-500">
                       <svg className="w-12 h-12 mx-auto text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
                       Aucun produit trouve
                     </td>

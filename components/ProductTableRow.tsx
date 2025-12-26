@@ -19,20 +19,23 @@ export const ProductTableRow: React.FC<ProductTableRowProps> = ({ product }) => 
   const isClient = hasRole([UserRole.CLIENT_ADMIN, UserRole.CLIENT_USER]);
   const canBuy = isClient; // Only clients can buy
 
-  // Prix HT et TVA
-  const priceHT = product.priceHT || product.pricePublic || 0;
+  // Prix HT de base et TVA
+  const basePriceHT = product.priceHT || product.pricePublic || 0;
   const tvaRate = product.tvaRate != null ? product.tvaRate : null;
 
-  // Calculer le prix net basé sur la remise du client (user.globalDiscount)
+  // Appliquer la majoration si le client a typeRemise 2 ou 4
+  const hasMajoration = user?.typeRemise && [2, 4].includes(user.typeRemise) && user?.tauxMajoration && user.tauxMajoration > 0;
+  const majorationRate = hasMajoration ? user.tauxMajoration : 0;
+  const priceHT = basePriceHT * (1 + majorationRate / 100);
+
+  // Prix pour le panier (avec majoration appliquée)
   const price: ClientPrice | null = useMemo(() => {
-    const discountPercent = user?.globalDiscount || 0;
-    const netPrice = priceHT * (1 - discountPercent / 100);
     return {
       reference: product.reference,
-      netPrice,
-      discountPercentage: discountPercent,
+      netPrice: priceHT,
+      discountPercentage: 0,
     };
-  }, [product.reference, priceHT, user?.globalDiscount]);
+  }, [product.reference, priceHT]);
 
   const handleAdd = () => {
     if (price && canBuy && qty > 0) {
@@ -74,8 +77,8 @@ export const ProductTableRow: React.FC<ProductTableRowProps> = ({ product }) => 
            </span>
         )}
       </td>
-      {/* Prix HT */}
-      <td className={`px-3 py-3 text-right font-mono text-sm whitespace-nowrap ${isInternal ? 'text-slate-100 font-bold' : 'text-slate-500 line-through decoration-slate-600'}`}>
+      {/* Prix HT (avec majoration appliquée si typeRemise 2 ou 4) */}
+      <td className="px-3 py-3 text-right font-mono text-sm whitespace-nowrap text-slate-100 font-bold">
         {formatPriceWithCurrency(priceHT)}
       </td>
       {/* TVA */}
@@ -88,17 +91,6 @@ export const ProductTableRow: React.FC<ProductTableRowProps> = ({ product }) => 
           <span className="text-xs text-slate-600">-</span>
         )}
       </td>
-      {/* HIDE NET PRICE CELL FOR ADMINS */}
-      {!isInternal && (
-        <td className="px-3 py-3 text-right">
-          {price ? (
-            <div className="flex flex-col items-end">
-              <div className="font-bold text-slate-100 font-mono text-sm whitespace-nowrap">{formatPriceWithCurrency(price.netPrice)}</div>
-              <div className="text-[10px] text-neon-green font-bold bg-neon-green/10 px-1 rounded border border-neon-green/30 whitespace-nowrap">-{price.discountPercentage}%</div>
-            </div>
-          ) : <span className="text-xs text-neon-pink">Indisp.</span>}
-        </td>
-      )}
 
       {/* HIDE ACTION CELL FOR ADMINS */}
       {!isInternal && (
