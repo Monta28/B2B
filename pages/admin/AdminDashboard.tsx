@@ -391,10 +391,15 @@ export const AdminDashboard = () => {
                       />
                     </div>
 
-                    {/* Day number */}
-                    <span className={`text-[8px] mt-1 flex-shrink-0 ${isToday ? 'text-accent font-bold' : 'text-slate-500'}`}>
-                      {dayNum}
-                    </span>
+                    {/* Day number and weekday */}
+                    <div className="flex flex-col items-center mt-1 flex-shrink-0">
+                      <span className={`text-[10px] font-medium ${isToday ? 'text-accent font-bold' : 'text-slate-400'}`}>
+                        {dayNum}
+                      </span>
+                      <span className={`text-[9px] font-semibold ${isToday ? 'text-accent' : 'text-slate-500'}`}>
+                        {['D', 'L', 'M', 'M', 'J', 'V', 'S'][new Date(day.date).getDay()]}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
