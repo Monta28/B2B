@@ -37,9 +37,14 @@ export class NewsService {
   }
 
   async create(createNewsDto: CreateNewsDto, currentUserId: string, ipAddress?: string): Promise<News> {
-    const newsData: any = { ...createNewsDto };
-    if (newsData.publishDate) {
-      newsData.publishDate = new Date(newsData.publishDate);
+    const newsData: Partial<News> = {
+      title: createNewsDto.title,
+      content: createNewsDto.content,
+      type: createNewsDto.type,
+      isActive: createNewsDto.isActive,
+    };
+    if (createNewsDto.publishDate) {
+      newsData.publishDate = new Date(createNewsDto.publishDate);
     }
     const news = this.newsRepository.create(newsData);
     const savedNews = await this.newsRepository.save(news);
@@ -55,11 +60,12 @@ export class NewsService {
   async update(id: string, updateNewsDto: UpdateNewsDto, currentUserId: string, ipAddress?: string): Promise<News> {
     const news = await this.findOne(id);
 
-    const updateData: any = { ...updateNewsDto };
-    if (updateData.publishDate) {
-      updateData.publishDate = new Date(updateData.publishDate);
-    }
-    Object.assign(news, updateData);
+    if (updateNewsDto.title !== undefined) news.title = updateNewsDto.title;
+    if (updateNewsDto.content !== undefined) news.content = updateNewsDto.content;
+    if (updateNewsDto.type !== undefined) news.type = updateNewsDto.type;
+    if (updateNewsDto.isActive !== undefined) news.isActive = updateNewsDto.isActive;
+    if (updateNewsDto.publishDate) news.publishDate = new Date(updateNewsDto.publishDate);
+
     const savedNews = await this.newsRepository.save(news);
 
     // Audit log
