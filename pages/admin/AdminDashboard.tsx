@@ -350,7 +350,7 @@ export const AdminDashboard = () => {
           </div>
           <div className="p-6">
             <div className="h-48 flex items-end gap-1">
-              {dailyStats?.dailyOrders.map((day) => {
+              {dailyStats?.dailyOrders?.map((day) => {
                 const height = maxOrders > 0 ? (day.count / maxOrders) * 100 : 0;
                 const dayNum = parseInt(day.date.split('-')[2]);
                 const isToday = new Date().getDate() === dayNum;
@@ -359,7 +359,7 @@ export const AdminDashboard = () => {
                 return (
                   <div
                     key={day.date}
-                    className="flex-1 flex flex-col items-center group relative"
+                    className="flex-1 h-full flex flex-col items-center justify-end group relative"
                     title={`${day.date}: ${day.count} commandes`}
                   >
                     {/* Tooltip */}
@@ -383,7 +383,7 @@ export const AdminDashboard = () => {
                     />
 
                     {/* Day number */}
-                    <span className={`text-[9px] mt-1 ${isToday ? 'text-accent font-bold' : 'text-slate-500'}`}>
+                    <span className={`text-[9px] mt-1 flex-shrink-0 ${isToday ? 'text-accent font-bold' : 'text-slate-500'}`}>
                       {dayNum}
                     </span>
                   </div>
@@ -413,53 +413,63 @@ export const AdminDashboard = () => {
         <div className="card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-hidden">
           <div className="px-6 py-4 border-b border-accent/10 bg-brand-800/30">
             <h3 className="font-bold text-white text-lg">Efficacité B2B</h3>
+            <p className="text-xs text-slate-400 mt-1">Équivalent travail commercial automatisé</p>
           </div>
-          <div className="p-6 space-y-6">
-            {/* Main metric */}
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-accent/20 to-neon-purple/20 border-4 border-accent/30">
-                <span className="text-3xl font-extrabold text-white">
-                  {efficiency?.commercialsReplaced.toFixed(1) || '0'}
-                </span>
+          <div className="p-6 space-y-5">
+            {/* Two metrics side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Daily metric */}
+              <div className="text-center p-4 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 border border-neon-cyan/20">
+                <div className="text-3xl font-extrabold text-neon-cyan">
+                  {efficiency?.dailyCommercialsReplaced.toFixed(2) || '0'}
+                </div>
+                <p className="text-xs font-semibold text-white mt-2">Par jour</p>
+                <p className="text-[10px] text-slate-400 mt-1">commerciaux équivalents</p>
               </div>
-              <p className="text-sm font-bold text-white mt-3">
-                Commerciaux remplacés
-              </p>
-              <p className="text-xs text-slate-400">ce mois</p>
-            </div>
 
-            {/* Details */}
-            <div className="space-y-2 pt-4 border-t border-accent/10 text-sm">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Commandes/jour (moy.)</span>
-                <span className="font-bold text-white">{efficiency?.avgPerDay || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Cmd/commercial/jour</span>
-                <span className="font-bold text-accent">{ordersPerCommercialPerDay}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Jours ouvrés</span>
-                <span className="font-bold text-white">{efficiency?.workDays || 0}</span>
+              {/* Monthly metric */}
+              <div className="text-center p-4 rounded-xl bg-gradient-to-br from-accent/10 to-neon-purple/10 border border-accent/20">
+                <div className="text-3xl font-extrabold text-accent">
+                  {efficiency?.commercialsReplaced.toFixed(2) || '0'}
+                </div>
+                <p className="text-xs font-semibold text-white mt-2">Ce mois</p>
+                <p className="text-[10px] text-slate-400 mt-1">commerciaux équivalents</p>
               </div>
             </div>
 
-            {/* Interpretation */}
-            <div className="p-3 bg-accent/10 rounded-xl border border-accent/20">
-              <p className="text-xs text-slate-300">
-                <span className="text-accent font-bold">Votre B2B</span> traite l'équivalent de{' '}
-                <span className="text-white font-bold">{efficiency?.dailyCommercialsReplaced.toFixed(2) || '0'}</span>{' '}
-                commerciaux par jour.
+            {/* Explanation box */}
+            <div className="p-3 bg-brand-800/50 rounded-xl border border-accent/10">
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <span className="text-accent font-bold">Interprétation:</span> Avec{' '}
+                <span className="text-white font-semibold">{efficiency?.avgPerDay || 0}</span> commandes/jour en moyenne
+                et un commercial qui traite <span className="text-white font-semibold">{ordersPerCommercialPerDay}</span> cmd/jour,
+                votre B2B remplace <span className="text-neon-cyan font-bold">{efficiency?.dailyCommercialsReplaced.toFixed(2) || '0'}</span> commercial(s) quotidiennement.
               </p>
+            </div>
+
+            {/* Stats summary */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 bg-brand-800/30 rounded-lg">
+                <div className="text-sm font-bold text-white">{efficiency?.monthOrderCount || 0}</div>
+                <div className="text-[10px] text-slate-400">Cmd ce mois</div>
+              </div>
+              <div className="p-2 bg-brand-800/30 rounded-lg">
+                <div className="text-sm font-bold text-white">{efficiency?.avgPerDay || 0}</div>
+                <div className="text-[10px] text-slate-400">Cmd/jour moy.</div>
+              </div>
+              <div className="p-2 bg-brand-800/30 rounded-lg">
+                <div className="text-sm font-bold text-accent">{ordersPerCommercialPerDay}</div>
+                <div className="text-[10px] text-slate-400">Cmd/comm./jour</div>
+              </div>
             </div>
 
             {/* Link to config */}
-            <div className="text-center">
+            <div className="text-center pt-2 border-t border-accent/10">
               <Link
                 to="/admin/config"
                 className="text-xs text-accent hover:text-accent-hover underline"
               >
-                Modifier le paramètre
+                Modifier le paramètre Cmd/commercial/jour
               </Link>
             </div>
           </div>
