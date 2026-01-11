@@ -330,13 +330,13 @@ export const AdminDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart - Daily Orders */}
         <div className="lg:col-span-2 card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-visible">
-          <div className="px-6 py-4 border-b border-accent/10 bg-brand-800/30 flex justify-between items-center">
+          <div className="px-6 py-3 border-b border-accent/10 bg-brand-800/30 flex justify-between items-center">
             <h3 className="font-bold text-white text-lg">Activité Commandes - {monthName}</h3>
             <div className="text-sm text-slate-400">
               Moyenne: <span className="text-accent font-bold">{dailyStats?.avgPerDay || 0}</span>/jour
             </div>
           </div>
-          <div className="p-6 overflow-visible">
+          <div className="px-6 py-4 overflow-visible">
             <div className="h-48 flex items-end gap-[2px] overflow-visible">
               {dailyStats?.dailyOrders?.map((day) => {
                 const createdHeight = maxOrders > 0 ? ((day.created || 0) / maxOrders) * 100 : 0;
@@ -354,7 +354,7 @@ export const AdminDashboard = () => {
                   >
                     {/* Tooltip - positioned to stay within bounds */}
                     <div className="absolute bottom-full mb-2 hidden group-hover:block z-50 left-1/2 -translate-x-1/2 pointer-events-none">
-                      <div className="bg-brand-900/95 backdrop-blur border border-accent/30 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
+                      <div className="card-futuristic border border-accent/30 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
                         <div className="font-bold text-white mb-1">{day.date.split('-')[2]}/{day.date.split('-')[1]}</div>
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 bg-sky-400 rounded-full"></span>
@@ -362,13 +362,13 @@ export const AdminDashboard = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
-                          <span className="text-amber-400">{day.validated || 0} validées</span>
+                          <span className="text-amber-500">{day.validated || 0} validées</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                          <span className="text-emerald-400">{day.shipped || 0} expédiées</span>
+                          <span className="text-emerald-500">{day.shipped || 0} expédiées</span>
                         </div>
-                        <div className="text-slate-400 mt-1 pt-1 border-t border-slate-700">{formatPriceWithCurrency(day.totalHT)} HT</div>
+                        <div className="text-slate-400 mt-1 pt-1 border-t border-accent/20">{formatPriceWithCurrency(day.totalHT)} HT</div>
                       </div>
                     </div>
 
@@ -401,7 +401,7 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center justify-center gap-5 mt-4 text-xs text-slate-500">
+            <div className="flex items-center justify-center gap-5 mt-4 text-xs text-white bg-brand-800/20 rounded-lg px-4 py-2">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-sky-400 rounded"></div>
                 <span>Passées</span>
@@ -448,16 +448,6 @@ export const AdminDashboard = () => {
                 <p className="text-xs font-semibold text-white mt-2">Ce mois</p>
                 <p className="text-[10px] text-slate-400 mt-1">commerciaux équivalents</p>
               </div>
-            </div>
-
-            {/* Explanation box */}
-            <div className="p-3 bg-brand-800/50 rounded-xl border border-accent/10">
-              <p className="text-xs text-slate-300 leading-relaxed">
-                <span className="text-accent font-bold">Interprétation:</span> Avec{' '}
-                <span className="text-white font-semibold">{efficiency?.avgPerDay || 0}</span> commandes/jour en moyenne
-                et un commercial qui traite <span className="text-white font-semibold">{ordersPerCommercialPerDay}</span> cmd/jour,
-                votre B2B remplace <span className="text-neon-cyan font-bold">{efficiency?.dailyCommercialsReplaced.toFixed(2) || '0'}</span> commercial(s) quotidiennement.
-              </p>
             </div>
 
             {/* Stats summary */}
