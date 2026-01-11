@@ -145,25 +145,13 @@ export const AdminDashboard = () => {
     };
   }, [dailyStats, ordersPerCommercialPerDay]);
 
-  // Debug: Log dailyStats when it changes
-  useEffect(() => {
-    if (dailyStats) {
-      const nonZero = dailyStats.dailyOrders?.filter(d => d.count > 0) || [];
-      console.log('[AdminDashboard] dailyStats:', {
-        avgPerDay: dailyStats.avgPerDay,
-        monthOrderCount: dailyStats.monthOrderCount,
-        todayCount: dailyStats.todayCount,
-        dailyOrdersLength: dailyStats.dailyOrders?.length,
-        nonZeroDays: nonZero.length,
-        sample: nonZero.slice(0, 3),
-      });
-    }
-  }, [dailyStats]);
-
-  // Find max for chart scaling
+  // Find max for chart scaling (consider all 3 series)
   const maxOrders = useMemo(() => {
     if (!dailyStats?.dailyOrders) return 10;
-    const max = Math.max(...dailyStats.dailyOrders.map(d => d.count), 1);
+    const max = Math.max(
+      ...dailyStats.dailyOrders.map(d => Math.max(d.created || 0, d.validated || 0, d.shipped || 0)),
+      1
+    );
     return Math.ceil(max * 1.2); // Add 20% headroom
   }, [dailyStats]);
 
@@ -343,47 +331,66 @@ export const AdminDashboard = () => {
         {/* Chart - Daily Orders */}
         <div className="lg:col-span-2 card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-hidden">
           <div className="px-6 py-4 border-b border-accent/10 bg-brand-800/30 flex justify-between items-center">
-            <h3 className="font-bold text-white text-lg">Commandes par Jour - {monthName}</h3>
+            <h3 className="font-bold text-white text-lg">Activité Commandes - {monthName}</h3>
             <div className="text-sm text-slate-400">
               Moyenne: <span className="text-accent font-bold">{dailyStats?.avgPerDay || 0}</span>/jour
             </div>
           </div>
           <div className="p-6">
-            <div className="h-48 flex items-end gap-1">
+            <div className="h-48 flex items-end gap-[2px]">
               {dailyStats?.dailyOrders?.map((day) => {
-                const height = maxOrders > 0 ? (day.count / maxOrders) * 100 : 0;
+                const createdHeight = maxOrders > 0 ? ((day.created || 0) / maxOrders) * 100 : 0;
+                const validatedHeight = maxOrders > 0 ? ((day.validated || 0) / maxOrders) * 100 : 0;
+                const shippedHeight = maxOrders > 0 ? ((day.shipped || 0) / maxOrders) * 100 : 0;
                 const dayNum = parseInt(day.date.split('-')[2]);
                 const isToday = new Date().getDate() === dayNum;
-                const isWeekend = new Date(day.date).getDay() === 0 || new Date(day.date).getDay() === 6;
 
                 return (
                   <div
                     key={day.date}
                     className="flex-1 h-full flex flex-col items-center justify-end group relative"
-                    title={`${day.date}: ${day.count} commandes`}
                   >
                     {/* Tooltip */}
                     <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
                       <div className="bg-brand-900 border border-accent/20 rounded-lg px-3 py-2 text-xs shadow-lg whitespace-nowrap">
-                        <div className="font-bold text-white">{day.count} commandes</div>
-                        <div className="text-slate-400">{formatPriceWithCurrency(day.totalHT)} HT</div>
+                        <div className="font-bold text-white mb-1">{day.date.split('-')[2]}/{day.date.split('-')[1]}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-neon-cyan rounded-full"></span>
+                          <span className="text-neon-cyan">{day.created || 0} passées</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span className="text-blue-400">{day.validated || 0} validées</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-neon-green rounded-full"></span>
+                          <span className="text-neon-green">{day.shipped || 0} expédiées</span>
+                        </div>
+                        <div className="text-slate-400 mt-1 pt-1 border-t border-slate-700">{formatPriceWithCurrency(day.totalHT)} HT</div>
                       </div>
                     </div>
 
-                    {/* Bar */}
-                    <div
-                      className={`w-full rounded-t transition-all duration-300 group-hover:opacity-80 ${
-                        isToday
-                          ? 'bg-accent shadow-glow'
-                          : isWeekend
-                          ? 'bg-slate-600'
-                          : 'bg-neon-cyan'
-                      }`}
-                      style={{ height: `${Math.max(height, day.count > 0 ? 4 : 0)}%` }}
-                    />
+                    {/* Grouped Bars */}
+                    <div className="flex items-end gap-[1px] w-full h-full">
+                      {/* Passées (created) */}
+                      <div
+                        className={`flex-1 rounded-t transition-all duration-300 group-hover:opacity-80 ${isToday ? 'bg-accent shadow-glow' : 'bg-neon-cyan'}`}
+                        style={{ height: `${Math.max(createdHeight, (day.created || 0) > 0 ? 4 : 0)}%` }}
+                      />
+                      {/* Validées */}
+                      <div
+                        className="flex-1 bg-blue-500 rounded-t transition-all duration-300 group-hover:opacity-80"
+                        style={{ height: `${Math.max(validatedHeight, (day.validated || 0) > 0 ? 4 : 0)}%` }}
+                      />
+                      {/* Expédiées */}
+                      <div
+                        className="flex-1 bg-neon-green rounded-t transition-all duration-300 group-hover:opacity-80"
+                        style={{ height: `${Math.max(shippedHeight, (day.shipped || 0) > 0 ? 4 : 0)}%` }}
+                      />
+                    </div>
 
                     {/* Day number */}
-                    <span className={`text-[9px] mt-1 flex-shrink-0 ${isToday ? 'text-accent font-bold' : 'text-slate-500'}`}>
+                    <span className={`text-[8px] mt-1 flex-shrink-0 ${isToday ? 'text-accent font-bold' : 'text-slate-500'}`}>
                       {dayNum}
                     </span>
                   </div>
@@ -392,14 +399,18 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 mt-4 text-xs text-slate-400">
+            <div className="flex items-center justify-center gap-6 mt-4 text-xs text-slate-400">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-neon-cyan rounded"></div>
-                <span>Jours ouvrés</span>
+                <span>Passées</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-slate-600 rounded"></div>
-                <span>Weekend</span>
+                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                <span>Validées</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-neon-green rounded"></div>
+                <span>Expédiées</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-accent rounded shadow-glow"></div>
