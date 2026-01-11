@@ -329,62 +329,64 @@ export const AdminDashboard = () => {
       {/* Chart and Efficiency Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart - Daily Orders */}
-        <div className="lg:col-span-2 card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-hidden">
+        <div className="lg:col-span-2 card-futuristic rounded-2xl shadow-card border border-accent/10 overflow-visible">
           <div className="px-6 py-4 border-b border-accent/10 bg-brand-800/30 flex justify-between items-center">
             <h3 className="font-bold text-white text-lg">Activité Commandes - {monthName}</h3>
             <div className="text-sm text-slate-400">
               Moyenne: <span className="text-accent font-bold">{dailyStats?.avgPerDay || 0}</span>/jour
             </div>
           </div>
-          <div className="p-6">
-            <div className="h-48 flex items-end gap-[2px]">
+          <div className="p-6 overflow-visible">
+            <div className="h-48 flex items-end gap-[2px] overflow-visible">
               {dailyStats?.dailyOrders?.map((day) => {
                 const createdHeight = maxOrders > 0 ? ((day.created || 0) / maxOrders) * 100 : 0;
                 const validatedHeight = maxOrders > 0 ? ((day.validated || 0) / maxOrders) * 100 : 0;
                 const shippedHeight = maxOrders > 0 ? ((day.shipped || 0) / maxOrders) * 100 : 0;
                 const dayNum = parseInt(day.date.split('-')[2]);
-                const isToday = new Date().getDate() === dayNum;
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const isToday = day.date === todayStr;
 
                 return (
                   <div
                     key={day.date}
                     className="flex-1 h-full flex flex-col items-center justify-end group relative"
                   >
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                      <div className="bg-brand-900 border border-accent/20 rounded-lg px-3 py-2 text-xs shadow-lg whitespace-nowrap">
+                    {/* Tooltip - positioned to stay within bounds */}
+                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-50 left-1/2 -translate-x-1/2 pointer-events-none">
+                      <div className="bg-brand-900/95 backdrop-blur border border-accent/30 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
                         <div className="font-bold text-white mb-1">{day.date.split('-')[2]}/{day.date.split('-')[1]}</div>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-neon-cyan rounded-full"></span>
-                          <span className="text-neon-cyan">{day.created || 0} passées</span>
+                          <span className="w-2 h-2 bg-sky-400 rounded-full"></span>
+                          <span className="text-sky-400">{day.created || 0} passées</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                          <span className="text-blue-400">{day.validated || 0} validées</span>
+                          <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+                          <span className="text-amber-400">{day.validated || 0} validées</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-neon-green rounded-full"></span>
-                          <span className="text-neon-green">{day.shipped || 0} expédiées</span>
+                          <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                          <span className="text-emerald-400">{day.shipped || 0} expédiées</span>
                         </div>
                         <div className="text-slate-400 mt-1 pt-1 border-t border-slate-700">{formatPriceWithCurrency(day.totalHT)} HT</div>
                       </div>
                     </div>
 
-                    {/* Grouped Bars */}
+                    {/* Grouped Bars - distinct colors */}
                     <div className="flex items-end gap-[1px] w-full h-full">
-                      {/* Passées (created) */}
+                      {/* Passées (created) - Sky blue / Pink for today */}
                       <div
-                        className={`flex-1 rounded-t transition-all duration-300 group-hover:opacity-80 ${isToday ? 'bg-accent shadow-glow' : 'bg-neon-cyan'}`}
+                        className={`flex-1 rounded-t transition-all duration-300 group-hover:opacity-80 ${isToday ? 'bg-fuchsia-500 shadow-glow' : 'bg-sky-400'}`}
                         style={{ height: `${Math.max(createdHeight, (day.created || 0) > 0 ? 4 : 0)}%` }}
                       />
-                      {/* Validées */}
+                      {/* Validées - Amber/Orange / Pink for today */}
                       <div
-                        className="flex-1 bg-blue-500 rounded-t transition-all duration-300 group-hover:opacity-80"
+                        className={`flex-1 rounded-t transition-all duration-300 group-hover:opacity-80 ${isToday ? 'bg-fuchsia-400' : 'bg-amber-500'}`}
                         style={{ height: `${Math.max(validatedHeight, (day.validated || 0) > 0 ? 4 : 0)}%` }}
                       />
-                      {/* Expédiées */}
+                      {/* Expédiées - Emerald green / Pink for today */}
                       <div
-                        className="flex-1 bg-neon-green rounded-t transition-all duration-300 group-hover:opacity-80"
+                        className={`flex-1 rounded-t transition-all duration-300 group-hover:opacity-80 ${isToday ? 'bg-fuchsia-300' : 'bg-emerald-500'}`}
                         style={{ height: `${Math.max(shippedHeight, (day.shipped || 0) > 0 ? 4 : 0)}%` }}
                       />
                     </div>
@@ -399,21 +401,21 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center justify-center gap-6 mt-4 text-xs text-slate-400">
+            <div className="flex items-center justify-center gap-5 mt-4 text-xs text-slate-500">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-neon-cyan rounded"></div>
+                <div className="w-3 h-3 bg-sky-400 rounded"></div>
                 <span>Passées</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                <div className="w-3 h-3 bg-amber-500 rounded"></div>
                 <span>Validées</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-neon-green rounded"></div>
+                <div className="w-3 h-3 bg-emerald-500 rounded"></div>
                 <span>Expédiées</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-accent rounded shadow-glow"></div>
+                <div className="w-3 h-3 bg-fuchsia-500 rounded shadow-glow"></div>
                 <span>Aujourd'hui</span>
               </div>
             </div>
