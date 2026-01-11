@@ -152,6 +152,10 @@ export class AppConfig {
   @Column({ name: 'document_footer_text', type: 'text', nullable: true })
   documentFooterText: string; // Texte de pied de page pour documents
 
+  // B2B Efficiency settings
+  @Column({ name: 'orders_per_commercial_per_day', type: 'int', default: 25 })
+  ordersPerCommercialPerDay: number; // Nombre moyen de commandes par commercial par jour
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

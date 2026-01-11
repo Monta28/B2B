@@ -174,6 +174,17 @@ export const api = {
     return fetchApi<any[]>('/orders');
   },
 
+  // Get daily order statistics for admin dashboard
+  getDailyOrderStats: async () => {
+    return fetchApi<{
+      dailyOrders: { date: string; count: number; totalHT: number }[];
+      monthTotal: number;
+      monthOrderCount: number;
+      todayCount: number;
+      avgPerDay: number;
+    }>('/orders/stats/daily');
+  },
+
   updateOrderStatus: async (id: string, status: string) => {
     return fetchApi<any>(`/orders/${id}/status`, {
       method: 'PATCH',

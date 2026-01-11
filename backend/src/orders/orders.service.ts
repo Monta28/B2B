@@ -61,6 +61,79 @@ export class OrdersService {
     return queryBuilder.orderBy('order.createdAt', 'DESC').getMany();
   }
 
+  // Get daily order statistics for admin dashboard (current month)
+  async getDailyOrderStats(): Promise<{
+    dailyOrders: { date: string; count: number; totalHT: number }[];
+    monthTotal: number;
+    monthOrderCount: number;
+    todayCount: number;
+    avgPerDay: number;
+  }> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+
+    // First day of current month
+    const startOfMonth = new Date(year, month, 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Last day of current month
+    const endOfMonth = new Date(year, month + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    // Get all orders for this month
+    const orders = await this.orderRepository
+      .createQueryBuilder('order')
+      .where('order.createdAt >= :startOfMonth', { startOfMonth })
+      .andWhere('order.createdAt <= :endOfMonth', { endOfMonth })
+      .getMany();
+
+    // Group orders by day
+    const dailyMap = new Map<string, { count: number; totalHT: number }>();
+
+    // Initialize all days of the month
+    for (let d = 1; d <= endOfMonth.getDate(); d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      dailyMap.set(dateStr, { count: 0, totalHT: 0 });
+    }
+
+    // Count orders per day
+    let monthTotal = 0;
+    for (const order of orders) {
+      const orderDate = new Date(order.createdAt);
+      const dateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
+
+      const dayData = dailyMap.get(dateStr) || { count: 0, totalHT: 0 };
+      dayData.count += 1;
+      dayData.totalHT += Number(order.totalHt) || 0;
+      dailyMap.set(dateStr, dayData);
+
+      monthTotal += Number(order.totalHt) || 0;
+    }
+
+    // Convert to array and sort by date
+    const dailyOrders = Array.from(dailyMap.entries())
+      .map(([date, data]) => ({ date, count: data.count, totalHT: data.totalHT }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Today's count
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayData = dailyMap.get(todayStr);
+    const todayCount = todayData?.count || 0;
+
+    // Calculate average per day (only counting days up to today)
+    const daysElapsed = now.getDate();
+    const avgPerDay = daysElapsed > 0 ? Math.round((orders.length / daysElapsed) * 100) / 100 : 0;
+
+    return {
+      dailyOrders,
+      monthTotal: Math.round(monthTotal * 100) / 100,
+      monthOrderCount: orders.length,
+      todayCount,
+      avgPerDay,
+    };
+  }
+
   async findOne(id: string, currentUser: any): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id },

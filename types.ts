@@ -227,4 +227,16 @@ export interface AppConfig {
   companyBankRib?: string; // RIB bancaire
   documentLogoUrl?: string; // Logo for documents
   documentFooterText?: string; // Footer text for documents
+
+  // B2B Efficiency settings
+  ordersPerCommercialPerDay?: number; // Nombre moyen de commandes par commercial par jour
+}
+
+// Daily order statistics for admin dashboard
+export interface DailyOrderStats {
+  dailyOrders: { date: string; count: number; totalHT: number }[];
+  monthTotal: number;
+  monthOrderCount: number;
+  todayCount: number;
+  avgPerDay: number;
 }

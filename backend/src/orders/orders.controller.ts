@@ -104,6 +104,13 @@ export class OrdersController {
     return orders.map(transformOrder);
   }
 
+  // Get daily order statistics for admin dashboard (current month)
+  @Get('stats/daily')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN)
+  async getDailyStats() {
+    return this.ordersService.getDailyOrderStats();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req) {
     return this.ordersService.findOne(id, req.user);

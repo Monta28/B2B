@@ -388,6 +388,7 @@ export const AdminConfig = () => {
   const [decimals, setDecimals] = useState(0);
   const [cooldown, setCooldown] = useState(30);
   const [logos, setLogos] = useState<string[]>([]);
+  const [ordersPerCommercialPerDay, setOrdersPerCommercialPerDay] = useState(25);
 
   // Branding / Theme
   const [companyName, setCompanyName] = useState('');
@@ -562,6 +563,7 @@ export const AdminConfig = () => {
     setDecimals(appConfig.decimalPlaces);
     setCooldown(appConfig.validationCooldownSeconds);
     setLogos(appConfig.brandLogos || []);
+    setOrdersPerCommercialPerDay(appConfig.ordersPerCommercialPerDay || 25);
 
     setCompanyName(appConfig.companyName || '');
     setLogoUrl(appConfig.logoUrl);
@@ -677,6 +679,7 @@ export const AdminConfig = () => {
         currencySymbol: currency,
         decimalPlaces: decimals,
         validationCooldownSeconds: cooldown,
+        ordersPerCommercialPerDay,
         brandLogos: logos,
         weatherLocation: finalLocation,
         // Company details for documents
@@ -962,6 +965,26 @@ export const AdminConfig = () => {
             <div><label className="block text-sm font-medium text-slate-300">Symbole Devise</label><input type="text" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={currency} onChange={e => setCurrency(e.target.value)} /></div>
             <div><label className="block text-sm font-medium text-slate-300">Décimales</label><input type="number" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={decimals} onChange={e => setDecimals(Number(e.target.value))} /></div>
             <div><label className="block text-sm font-medium text-slate-300">Délai sécurité validation (s)</label><input type="number" className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40" value={cooldown} onChange={e => setCooldown(Number(e.target.value))} /></div>
+          </div>
+
+          {/* B2B Efficiency Parameter */}
+          <div className="border-t border-accent/10 pt-4">
+            <label className="block text-sm font-medium text-slate-300 mb-2">Efficacité B2B</label>
+            <p className="text-xs text-slate-500 mb-2">Paramètre pour calculer le nombre de commerciaux que le B2B peut remplacer.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400">Commandes par commercial par jour</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  className="mt-1 block w-full border border-accent/20 bg-brand-800/60 text-slate-100 rounded-md p-2 focus:ring-1 focus:ring-accent/30 focus:border-accent/40"
+                  value={ordersPerCommercialPerDay}
+                  onChange={e => setOrdersPerCommercialPerDay(Math.max(1, Math.min(100, Number(e.target.value))))}
+                />
+                <p className="text-xs text-slate-500 mt-1">Ex: 25 commandes/jour (7h lun-ven, 4h sam)</p>
+              </div>
+            </div>
           </div>
 
           {/* Weather Location Selectors */}

@@ -199,6 +199,13 @@ export class UpdateAppConfigDto {
   @IsOptional()
   @IsString()
   documentFooterText?: string; // Footer text for documents
+
+  // B2B Efficiency settings
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  ordersPerCommercialPerDay?: number; // Nombre moyen de commandes par commercial par jour
 }
 
 export class TestSqlConnectionDto {
