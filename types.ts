@@ -117,12 +117,23 @@ export interface OrderItem {
   designation: string;
   productName?: string; // Alias for designation from backend
   quantity: number;
+  quantityDelivered?: number; // Quantité livrée (0 = non livré, = quantity = livré complet)
   unitPrice: number;
   totalLine: number;
   lineTotal?: number; // Alias from backend
   availability?: 'DISPONIBLE' | 'RUPTURE'; // Disponibilité au moment de la commande
   tvaRate?: number; // Taux TVA en %
   location?: string; // Emplacement en stock (Position)
+}
+
+// DTO pour l'expédition d'une commande
+export interface ShipmentItem {
+  itemId: string;
+  quantityDelivered: number;
+}
+
+export interface ShipOrderRequest {
+  items: ShipmentItem[];
 }
 
 export interface OrderDocumentRef {

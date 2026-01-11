@@ -249,6 +249,14 @@ export const api = {
     return fetchApi<{ message: string }>(`/orders/${orderId}`, { method: 'DELETE' });
   },
 
+  // Ship order (fully or partially) - Admin only
+  shipOrder: async (orderId: string, items: { itemId: string; quantityDelivered: number }[]): Promise<any> => {
+    return fetchApi<any>(`/orders/${orderId}/ship`, {
+      method: 'PATCH',
+      body: JSON.stringify({ items }),
+    });
+  },
+
   // News
   getNews: async (activeOnly: boolean = false) => {
     const news = await fetchApi<any[]>(`/news${activeOnly ? '?activeOnly=true' : ''}`);

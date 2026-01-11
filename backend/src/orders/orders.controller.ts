@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
+import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto, ShipOrderDto } from './dto/create-order.dto';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Order, OrderStatus } from '../entities/order.entity';
@@ -72,6 +72,7 @@ function transformOrder(order: Order) {
       designation: item.productName,
       productName: item.productName,
       quantity: item.quantity,
+      quantityDelivered: item.quantityDelivered || 0,
       unitPrice: Number(item.unitPrice) || 0,
       totalLine: Number(item.lineTotal) || 0,
       lineTotal: Number(item.lineTotal) || 0,
@@ -171,6 +172,19 @@ export class OrdersController {
   async cleanupEditingLocks() {
     const count = await this.ordersService.cleanupExpiredEditingLocks();
     return { cleanedUp: count };
+  }
+
+  // Expédier une commande (totalement ou partiellement)
+  @Patch(':id/ship')
+  @Roles(UserRole.SYSTEM_ADMIN, UserRole.FULL_ADMIN, UserRole.PARTIAL_ADMIN)
+  async shipOrder(
+    @Param('id') id: string,
+    @Body() shipOrderDto: ShipOrderDto,
+    @Request() req,
+    @Ip() ip: string,
+  ) {
+    const order = await this.ordersService.shipOrder(id, shipOrderDto, req.user, this.getClientIp(req, ip));
+    return transformOrder(order);
   }
 
   // Synchroniser les commandes avec le DMS pour détecter les BL et factures

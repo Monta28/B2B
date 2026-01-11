@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { Link } from 'react-router-dom';
@@ -19,13 +19,8 @@ export const AdminDashboard = () => {
     refetchInterval: 60000, // Refresh every minute
   });
 
-  // Fetch full config for ordersPerCommercialPerDay
-  const { data: fullConfig } = useQuery({
-    queryKey: ['config'],
-    queryFn: api.getConfig,
-  });
-
-  const ordersPerCommercialPerDay = fullConfig?.ordersPerCommercialPerDay || 25;
+  // Use ordersPerCommercialPerDay from the config context (already synced)
+  const ordersPerCommercialPerDay = config?.ordersPerCommercialPerDay || 25;
 
   const activeClients = companies?.filter(c => c.isActive).length || 0;
 
@@ -149,6 +144,21 @@ export const AdminDashboard = () => {
       dailyCommercialsReplaced: Math.round(dailyCommercialsReplaced * 100) / 100,
     };
   }, [dailyStats, ordersPerCommercialPerDay]);
+
+  // Debug: Log dailyStats when it changes
+  useEffect(() => {
+    if (dailyStats) {
+      const nonZero = dailyStats.dailyOrders?.filter(d => d.count > 0) || [];
+      console.log('[AdminDashboard] dailyStats:', {
+        avgPerDay: dailyStats.avgPerDay,
+        monthOrderCount: dailyStats.monthOrderCount,
+        todayCount: dailyStats.todayCount,
+        dailyOrdersLength: dailyStats.dailyOrders?.length,
+        nonZeroDays: nonZero.length,
+        sample: nonZero.slice(0, 3),
+      });
+    }
+  }, [dailyStats]);
 
   // Find max for chart scaling
   const maxOrders = useMemo(() => {

@@ -22,6 +22,9 @@ export class OrderItem {
   @Column()
   quantity: number;
 
+  @Column({ name: 'quantity_delivered', type: 'int', default: 0 })
+  quantityDelivered: number; // Quantité livrée (0 = non livré, = quantity = livré complet)
+
   @Column({ name: 'unit_price', type: 'numeric', precision: 12, scale: 3 })
   unitPrice: number;
 

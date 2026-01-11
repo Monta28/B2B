@@ -148,6 +148,8 @@ export const Orders = () => {
   const [editShowDropdown, setEditShowDropdown] = useState(false);
   const [editHighlightedIndex, setEditHighlightedIndex] = useState(0);
   const [editConflict, setEditConflict] = useState<EditConflictState | null>(null);
+  const [shipmentOrder, setShipmentOrder] = useState<Order | null>(null);
+  const [shipmentItems, setShipmentItems] = useState<Record<string, number>>({});
 
   // État pour la modale de confirmation de fermeture (remplace les alertes natives)
   const [showCloseConfirm, setShowCloseConfirm] = useState<'refresh' | 'quit' | null>(null);
@@ -640,6 +642,40 @@ export const Orders = () => {
       toast.error(error.message || 'Erreur lors de la suppression');
     }
   });
+
+  const shipOrderMutation = useMutation({
+    mutationFn: ({ orderId, items }: { orderId: string; items: { itemId: string; quantityDelivered: number }[] }) =>
+      api.shipOrder(orderId, items),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Commande expédiée avec succès');
+      setShipmentOrder(null);
+      setShipmentItems({});
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erreur lors de l\'expédition');
+    }
+  });
+
+  // Ouvrir le modal d'expédition
+  const openShipmentModal = (order: Order) => {
+    setShipmentOrder(order);
+    // Initialiser les quantités livrées avec les valeurs actuelles ou la quantité totale
+    const initial: Record<string, number> = {};
+    order.items?.forEach(item => {
+      if (item.id) {
+        initial[item.id] = item.quantityDelivered ?? item.quantity;
+      }
+    });
+    setShipmentItems(initial);
+  };
+
+  // Soumettre l'expédition
+  const handleSubmitShipment = () => {
+    if (!shipmentOrder) return;
+    const items = Object.entries(shipmentItems).map(([itemId, qty]) => ({ itemId, quantityDelivered: qty as number }));
+    shipOrderMutation.mutate({ orderId: shipmentOrder.id, items });
+  };
 
   // Référence pour la fonction de sync automatique
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1296,6 +1332,17 @@ export const Orders = () => {
                               </svg>
                             </button>
                           </>
+                        )}
+                        {isInternal && order.status === OrderStatus.VALIDATED && (
+                          <button
+                            onClick={() => openShipmentModal(order)}
+                            className="bg-neon-purple/20 hover:bg-neon-purple/30 text-neon-purple border border-neon-purple/30 p-1 rounded-md shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                            title="Expédier la commande"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                          </button>
                         )}
                         {!isInternal && order.status === OrderStatus.PENDING && (
                           <>
@@ -1965,6 +2012,127 @@ export const Orders = () => {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Modal d'expédition */}
+      {shipmentOrder && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-brand-950 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden border border-accent/20">
+            <div className="bg-gradient-to-r from-neon-purple to-neon-purple/70 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Expédier la commande</h2>
+                  <p className="text-purple-200 text-sm mt-1">{shipmentOrder.orderNumber || shipmentOrder.dmsRef} - {shipmentOrder.companyName}</p>
+                </div>
+                <button onClick={() => { setShipmentOrder(null); setShipmentItems({}); }} className="text-white/70 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-colors">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="mb-4 p-4 bg-neon-purple/10 border border-neon-purple/30 rounded-xl">
+                <p className="text-sm text-neon-purple">
+                  <strong>Sélectionnez les quantités livrées</strong> pour chaque article. Mettez 0 pour les articles non livrés.
+                  Vous pouvez effectuer une livraison partielle.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {shipmentOrder.items?.map((item, idx) => {
+                  const itemId = item.id || `item-${idx}`;
+                  const qtyDelivered = shipmentItems[itemId] ?? item.quantity;
+                  const isPartial = qtyDelivered > 0 && qtyDelivered < item.quantity;
+                  const isComplete = qtyDelivered === item.quantity;
+                  const isNotDelivered = qtyDelivered === 0;
+
+                  return (
+                    <div key={itemId} className={`p-4 rounded-xl border-2 transition-all ${isComplete ? 'bg-neon-green/10 border-neon-green/40' : isPartial ? 'bg-neon-orange/10 border-neon-orange/40' : isNotDelivered ? 'bg-brand-900/50 border-accent/20' : 'bg-brand-900/30 border-accent/20'}`}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-white truncate">{item.designation}</p>
+                          <p className="text-xs text-slate-500 font-mono mt-0.5">{item.reference}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 uppercase font-bold">Commandé</p>
+                            <p className="text-lg font-bold text-white">{item.quantity}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 uppercase font-bold">Livré</p>
+                            <input
+                              type="number"
+                              min={0}
+                              max={item.quantity}
+                              value={qtyDelivered}
+                              onChange={(e) => {
+                                const val = Math.max(0, Math.min(item.quantity, parseInt(e.target.value) || 0));
+                                setShipmentItems(prev => ({ ...prev, [itemId]: val }));
+                              }}
+                              className={`w-20 text-center text-lg font-bold rounded-lg border-2 px-2 py-1 bg-brand-900 focus:ring-2 focus:ring-neon-purple ${isComplete ? 'border-neon-green text-neon-green' : isPartial ? 'border-neon-orange text-neon-orange' : 'border-accent/30 text-white'}`}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => setShipmentItems(prev => ({ ...prev, [itemId]: item.quantity }))}
+                              className={`px-2 py-1 rounded text-xs font-bold transition-all ${isComplete ? 'bg-neon-green text-brand-950' : 'bg-neon-green/20 text-neon-green hover:bg-neon-green/30'}`}
+                              title="Tout livrer"
+                            >
+                              Tout
+                            </button>
+                            <button
+                              onClick={() => setShipmentItems(prev => ({ ...prev, [itemId]: 0 }))}
+                              className={`px-2 py-1 rounded text-xs font-bold transition-all ${isNotDelivered ? 'bg-slate-600 text-white' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'}`}
+                              title="Rien livrer"
+                            >
+                              Rien
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      {isPartial && (
+                        <div className="mt-2 text-xs font-semibold text-neon-orange bg-neon-orange/10 px-2 py-1 rounded inline-block">
+                          ⚠️ Livraison partielle ({qtyDelivered}/{item.quantity})
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-accent/20 px-6 py-4 bg-brand-900/50 flex items-center justify-between">
+              <div className="text-sm text-slate-400">
+                <span className="font-semibold text-white">{(Object.values(shipmentItems) as number[]).filter(q => q > 0).length}</span> sur <span className="font-semibold text-white">{shipmentOrder.items?.length || 0}</span> articles à livrer
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShipmentOrder(null); setShipmentItems({}); }}
+                  className="px-4 py-2 text-slate-400 hover:text-white font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSubmitShipment}
+                  disabled={shipOrderMutation.isPending || (Object.values(shipmentItems) as number[]).every(q => q === 0)}
+                  className="px-6 py-2 bg-neon-purple hover:bg-neon-purple/80 text-white font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {shipOrderMutation.isPending ? (
+                    <>
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      Expédition...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                      Confirmer l'expédition
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -8,7 +8,7 @@ import { Company } from '../entities/company.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { Notification, NotificationType } from '../entities/notification.entity';
 import { User, UserRole } from '../entities/user.entity';
-import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
+import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto, ShipOrderDto } from './dto/create-order.dto';
 import { OrdersGateway } from './orders.gateway';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { DmsMappingService } from '../dms-mapping/dms-mapping.service';
@@ -99,6 +99,7 @@ export class OrdersService {
 
     // Count orders per day
     let monthTotal = 0;
+    console.log(`[DailyStats] Processing ${orders.length} orders for ${year}-${String(month + 1).padStart(2, '0')}`);
     for (const order of orders) {
       const orderDate = new Date(order.createdAt);
       const dateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
@@ -109,6 +110,11 @@ export class OrdersService {
       dailyMap.set(dateStr, dayData);
 
       monthTotal += Number(order.totalHt) || 0;
+
+      // Debug: Log first 3 orders to verify date mapping
+      if (orders.indexOf(order) < 3) {
+        console.log(`[DailyStats] Order ${order.id}: createdAt=${order.createdAt}, dateStr=${dateStr}, mapHas=${dailyMap.has(dateStr)}`);
+      }
     }
 
     // Convert to array and sort by date
@@ -124,6 +130,11 @@ export class OrdersService {
     // Calculate average per day (only counting days up to today)
     const daysElapsed = now.getDate();
     const avgPerDay = daysElapsed > 0 ? Math.round((orders.length / daysElapsed) * 100) / 100 : 0;
+
+    // Debug: Log non-zero daily counts
+    const nonZeroDays = dailyOrders.filter(d => d.count > 0);
+    console.log(`[DailyStats] Non-zero days: ${nonZeroDays.length}, Sample:`, nonZeroDays.slice(0, 3));
+    console.log(`[DailyStats] Result: monthOrderCount=${orders.length}, avgPerDay=${avgPerDay}, todayCount=${todayCount}`);
 
     return {
       dailyOrders,
@@ -379,6 +390,90 @@ export class OrdersService {
     }, ipAddress);
 
     return this.findOne(savedOrder.id, currentUser);
+  }
+
+  // Expédier une commande (totalement ou partiellement)
+  async shipOrder(id: string, shipOrderDto: ShipOrderDto, currentUser: any, ipAddress?: string): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id },
+      relations: ['company', 'items', 'createdByUser', 'editingByUser'],
+    });
+
+    if (!order) {
+      throw new NotFoundException('Commande non trouvée');
+    }
+
+    // Seules les commandes VALIDATED peuvent être expédiées
+    if (order.status !== OrderStatus.VALIDATED) {
+      throw new ForbiddenException('Seules les commandes validées (transmises DMS) peuvent être expédiées');
+    }
+
+    // Mettre à jour les quantités livrées pour chaque article
+    let isFullyShipped = true;
+    let hasPartialDelivery = false;
+
+    for (const shipItem of shipOrderDto.items) {
+      const orderItem = order.items.find(item => item.id === shipItem.itemId);
+      if (!orderItem) {
+        throw new BadRequestException(`Article avec ID ${shipItem.itemId} non trouvé dans la commande`);
+      }
+
+      // Vérifier que la quantité livrée ne dépasse pas la quantité commandée
+      if (shipItem.quantityDelivered > orderItem.quantity) {
+        throw new BadRequestException(
+          `La quantité livrée (${shipItem.quantityDelivered}) ne peut pas dépasser la quantité commandée (${orderItem.quantity}) pour l'article ${orderItem.productRef}`
+        );
+      }
+
+      // Mettre à jour la quantité livrée
+      orderItem.quantityDelivered = shipItem.quantityDelivered;
+      await this.orderItemRepository.save(orderItem);
+
+      // Vérifier si livraison complète ou partielle
+      if (shipItem.quantityDelivered === 0) {
+        isFullyShipped = false;
+      } else if (shipItem.quantityDelivered < orderItem.quantity) {
+        isFullyShipped = false;
+        hasPartialDelivery = true;
+      } else if (shipItem.quantityDelivered === orderItem.quantity) {
+        hasPartialDelivery = true;
+      }
+    }
+
+    // Si aucun article n'a été livré, on ne change pas le statut
+    if (!hasPartialDelivery) {
+      throw new BadRequestException('Aucun article n\'a été marqué comme livré');
+    }
+
+    const oldStatus = order.status;
+    order.status = OrderStatus.SHIPPED;
+    order.lastModifiedAt = new Date();
+
+    const savedOrder = await this.orderRepository.save(order);
+
+    // Notifier le client du changement de statut
+    await this.notifyClientStatusChange(order, oldStatus, OrderStatus.SHIPPED, true);
+
+    // Audit log avec détails de l'expédition
+    const shipmentDetails = {
+      isFullyShipped,
+      items: shipOrderDto.items.map(item => {
+        const orderItem = order.items.find(oi => oi.id === item.itemId);
+        return {
+          productRef: orderItem?.productRef,
+          quantityOrdered: orderItem?.quantity,
+          quantityDelivered: item.quantityDelivered,
+        };
+      }),
+    };
+
+    await this.logAuditAction(currentUser.id, 'SHIP_ORDER', 'Order', savedOrder.id, shipmentDetails, ipAddress);
+
+    // Recharger l'ordre avec toutes les relations pour le retour
+    return this.orderRepository.findOne({
+      where: { id: savedOrder.id },
+      relations: ['company', 'items', 'createdByUser', 'editingByUser'],
+    });
   }
 
   // Notifier les utilisateurs d'une entreprise d'un changement de statut

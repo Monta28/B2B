@@ -77,3 +77,20 @@ export class UpdateOrderStatusDto {
   @IsOptional()
   internalNotes?: string;
 }
+
+// DTO pour l'expédition partielle ou totale
+export class ShipmentItemDto {
+  @IsUUID()
+  itemId: string; // ID de l'OrderItem
+
+  @IsNumber()
+  @Min(0)
+  quantityDelivered: number; // Quantité livrée
+}
+
+export class ShipOrderDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ShipmentItemDto)
+  items: ShipmentItemDto[]; // Liste des articles avec quantités livrées
+}
