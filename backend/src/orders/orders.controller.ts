@@ -67,6 +67,7 @@ function transformOrder(order: Order) {
     clientNotes: order.clientNotes || null,
     internalNotes: order.internalNotes || null,
     items: order.items?.map(item => ({
+      id: item.id, // Inclure l'ID pour l'expédition
       reference: item.productRef,
       productRef: item.productRef,
       designation: item.productName,
