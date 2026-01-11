@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 
-const ITEMS_PER_PAGE = 50;
+const PAGE_SIZE = 100;
 
 type AuditLog = { id: string; timestamp: string; userEmail: string; action: string; details: string; ip?: string; };
 type SortConfig = { key: keyof AuditLog; direction: 'asc' | 'desc'; };
@@ -10,7 +10,7 @@ type SortConfig = { key: keyof AuditLog; direction: 'asc' | 'desc'; };
 export const AdminAudit = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'timestamp', direction: 'desc' });
 
-  // Column filtering state
+  // Column filtering state (client-side filtering on loaded data)
   const [filters, setFilters] = useState({
     timestamp: '',
     userEmail: '',
@@ -21,19 +21,42 @@ export const AdminAudit = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Infinite scroll state
-  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  const { data: logs, isLoading } = useQuery({
-    queryKey: ['audit-logs'],
-    queryFn: () => api.admin.getAuditLogs()
+  // Server-side pagination with infinite scroll
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['audit-logs', startDate, endDate],
+    queryFn: async ({ pageParam = 0 }) => {
+      return api.admin.getAuditLogs({
+        limit: PAGE_SIZE,
+        offset: pageParam,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce((acc, page) => acc + page.data.length, 0);
+      return loadedCount < lastPage.total ? loadedCount : undefined;
+    },
+    initialPageParam: 0,
   });
 
-  // Filtered logs based on column filters
+  // Flatten all pages into a single array
+  const allLogs = useMemo(() => {
+    return data?.pages.flatMap(page => page.data) || [];
+  }, [data]);
+
+  const totalCount = data?.pages[0]?.total || 0;
+
+  // Client-side filtering and sorting on loaded data
   const filteredLogs = useMemo(() => {
-    if (!logs) return [];
-    return logs.filter(log => {
+    return allLogs.filter(log => {
       // Column filters
       if (filters.timestamp) {
         const logDateTime = new Date(log.timestamp).toLocaleString().toLowerCase();
@@ -54,11 +77,6 @@ export const AdminAudit = () => {
         return false;
       }
 
-      // Date range filter
-      const logDate = log.timestamp.split('T')[0];
-      if (startDate && logDate < startDate) return false;
-      if (endDate && logDate > endDate) return false;
-
       return true;
     }).sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
@@ -67,7 +85,7 @@ export const AdminAudit = () => {
       if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [logs, filters, startDate, endDate, sortConfig]);
+  }, [allLogs, filters, sortConfig]);
 
   const handleSort = (key: keyof AuditLog) => setSortConfig(current => ({
     key,
@@ -78,28 +96,18 @@ export const AdminAudit = () => {
     <span className={`ml-1 inline-block transition-transform duration-200 ${sortConfig.key === columnKey ? (sortConfig.direction === 'asc' ? 'rotate-180 text-accent' : 'text-accent') : 'text-slate-500'}`}>▼</span>
   );
 
-  // Logs to display (with infinite scroll pagination)
-  const displayedLogs = useMemo(() => {
-    return filteredLogs.slice(0, displayCount);
-  }, [filteredLogs, displayCount]);
-
-  // Reset display count when filters change
-  useEffect(() => {
-    setDisplayCount(ITEMS_PER_PAGE);
-  }, [filters, startDate, endDate]);
-
-  // Infinite scroll handler
+  // Infinite scroll handler - load more from server
   const handleScroll = useCallback(() => {
     const container = tableContainerRef.current;
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
-    if (scrollHeight - scrollTop - clientHeight < 100) {
-      if (displayCount < filteredLogs.length) {
-        setDisplayCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredLogs.length));
+    if (scrollHeight - scrollTop - clientHeight < 200) {
+      if (hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
       }
     }
-  }, [displayCount, filteredLogs.length]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handlePrint = () => {
     window.print();
@@ -128,9 +136,6 @@ export const AdminAudit = () => {
     }
   };
 
-  // Dynamic table height
-  const tableHeight = 'calc(100vh - 290px)';
-
   const hasActiveFilters = Object.values(filters).some(f => f !== '') || startDate || endDate;
 
   return (
@@ -142,7 +147,7 @@ export const AdminAudit = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-end">
-           {/* Date Filters */}
+           {/* Date Filters - server-side */}
            <div className="flex items-center space-x-2 bg-brand-900/40 p-1 rounded-lg border border-accent/20">
              <input
                type="date"
@@ -211,7 +216,7 @@ export const AdminAudit = () => {
                   IP <SortIcon columnKey="ip" />
                 </th>
               </tr>
-              {/* Filter row */}
+              {/* Filter row - client-side filtering */}
               <tr className="bg-brand-900/40">
                 <th className="px-4 py-2">
                   <input
@@ -287,14 +292,14 @@ export const AdminAudit = () => {
                       <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                       </svg>
-                      <p className="font-medium">{logs?.length === 0 ? 'Aucun log' : 'Aucun résultat'}</p>
+                      <p className="font-medium">{allLogs.length === 0 ? 'Aucun log' : 'Aucun résultat'}</p>
                       <p className="text-sm mt-1">
-                        {logs?.length === 0 ? 'Aucune action enregistrée' : 'Essayez de modifier vos filtres'}
+                        {allLogs.length === 0 ? 'Aucune action enregistrée' : 'Essayez de modifier vos filtres'}
                       </p>
                     </div>
                   </td>
                 </tr>
-              ) : displayedLogs.map(log => (
+              ) : filteredLogs.map(log => (
                 <tr key={log.id} className="hover:bg-brand-800/30 text-sm">
                   <td className="px-4 py-3 font-mono text-slate-400 text-xs">
                     {new Date(log.timestamp).toLocaleString()}
@@ -307,6 +312,7 @@ export const AdminAudit = () => {
                       log.action.includes('CREATE') ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' :
                       log.action.includes('UPDATE') ? 'bg-accent/20 text-accent border border-accent/30' :
                       log.action.includes('DELETE') ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink/30' :
+                      log.action.includes('SEARCH') || log.action.includes('VIEW') || log.action.includes('CHECK') ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30' :
                       'bg-brand-800/50 text-slate-200 border border-accent/10'
                     }`}>
                       {log.action}
@@ -321,12 +327,12 @@ export const AdminAudit = () => {
                 </tr>
               ))}
               {/* Loading more indicator */}
-              {displayCount < filteredLogs.length && (
+              {(hasNextPage || isFetchingNextPage) && (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-slate-500">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent mr-2"></div>
-                      Défilez pour charger plus...
+                      {isFetchingNextPage ? 'Chargement...' : 'Défilez pour charger plus...'}
                     </div>
                   </td>
                 </tr>
@@ -338,9 +344,9 @@ export const AdminAudit = () => {
         {/* Pagination info bar - bottom */}
         <div className="px-4 py-2 bg-brand-900/40 border-t border-accent/10 text-xs text-slate-400 flex-shrink-0 flex justify-between items-center">
           <span>
-            Affichage de {displayedLogs.length} logs sur {filteredLogs.length}
-            {filteredLogs.length !== (logs?.length || 0) && (
-              <span className="text-slate-500"> (filtré de {logs?.length || 0} total)</span>
+            Chargé: {allLogs.length} / {totalCount} logs
+            {filteredLogs.length !== allLogs.length && (
+              <span className="text-slate-500"> (affiché: {filteredLogs.length})</span>
             )}
           </span>
           {hasActiveFilters && (

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as sql from 'mssql';
 import { AppConfig } from '../entities/app-config.entity';
+import { AuditLog } from '../entities/audit-log.entity';
 import { DmsMappingService } from '../dms-mapping/dms-mapping.service';
 import { DmsMappingType } from '../entities/dms-mapping.entity';
 
@@ -45,8 +46,33 @@ export class ProductsService {
   constructor(
     @InjectRepository(AppConfig)
     private appConfigRepository: Repository<AppConfig>,
+    @InjectRepository(AuditLog)
+    private auditLogRepository: Repository<AuditLog>,
     private dmsMappingService: DmsMappingService,
   ) {}
+
+  // Log product consultation action
+  async logProductConsultation(
+    userId: string,
+    action: string,
+    details: any,
+    ipAddress?: string,
+  ): Promise<void> {
+    try {
+      const auditLog = this.auditLogRepository.create({
+        userId,
+        action,
+        entityType: 'Product',
+        entityId: details.reference || null,
+        details,
+        ipAddress,
+      });
+      await this.auditLogRepository.save(auditLog);
+    } catch (error) {
+      // Log silently fails - don't break the main operation
+      console.error('Failed to log product consultation:', error);
+    }
+  }
 
   private async getConnection(): Promise<sql.ConnectionPool> {
     const config = await this.appConfigRepository.findOne({

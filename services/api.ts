@@ -472,17 +472,34 @@ export const api = {
 
     deleteNews: (id: string) => fetchApi<any>(`/news/${id}`, { method: 'DELETE' }),
 
-    // Audit
-    getAuditLogs: async () => {
-      const result = await fetchApi<{ data: any[]; total: number }>('/audit');
-      return (result.data || []).map((log: any) => ({
-        id: log.id,
-        timestamp: log.createdAt,
-        userEmail: log.user?.email || 'Système',
-        action: log.action,
-        details: typeof log.details === 'object' ? JSON.stringify(log.details) : log.details || '',
-        ip: log.ipAddress,
-      }));
+    // Audit - with server-side pagination
+    getAuditLogs: async (params?: {
+      limit?: number;
+      offset?: number;
+      action?: string;
+      startDate?: string;
+      endDate?: string;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.append('limit', String(params.limit));
+      if (params?.offset) queryParams.append('offset', String(params.offset));
+      if (params?.action) queryParams.append('action', params.action);
+      if (params?.startDate) queryParams.append('startDate', params.startDate);
+      if (params?.endDate) queryParams.append('endDate', params.endDate);
+
+      const url = `/audit${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const result = await fetchApi<{ data: any[]; total: number }>(url);
+      return {
+        data: (result.data || []).map((log: any) => ({
+          id: log.id,
+          timestamp: log.createdAt,
+          userEmail: log.user?.email || 'Système',
+          action: log.action,
+          details: typeof log.details === 'object' ? JSON.stringify(log.details) : log.details || '',
+          ip: log.ipAddress,
+        })),
+        total: result.total || 0,
+      };
     },
 
     // SQL Server Config
