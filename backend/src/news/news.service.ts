@@ -37,7 +37,11 @@ export class NewsService {
   }
 
   async create(createNewsDto: CreateNewsDto, currentUserId: string, ipAddress?: string): Promise<News> {
-    const news = this.newsRepository.create(createNewsDto);
+    const newsData: any = { ...createNewsDto };
+    if (newsData.publishDate) {
+      newsData.publishDate = new Date(newsData.publishDate);
+    }
+    const news = this.newsRepository.create(newsData);
     const savedNews = await this.newsRepository.save(news);
 
     // Audit log
@@ -51,7 +55,11 @@ export class NewsService {
   async update(id: string, updateNewsDto: UpdateNewsDto, currentUserId: string, ipAddress?: string): Promise<News> {
     const news = await this.findOne(id);
 
-    Object.assign(news, updateNewsDto);
+    const updateData: any = { ...updateNewsDto };
+    if (updateData.publishDate) {
+      updateData.publishDate = new Date(updateData.publishDate);
+    }
+    Object.assign(news, updateData);
     const savedNews = await this.newsRepository.save(news);
 
     // Audit log

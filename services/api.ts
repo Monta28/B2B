@@ -262,7 +262,7 @@ export const api = {
     const news = await fetchApi<any[]>(`/news${activeOnly ? '?activeOnly=true' : ''}`);
     return news.map((n: any) => ({
       ...n,
-      date: n.publishDate || n.createdAt?.split('T')[0],
+      date: (n.publishDate || n.createdAt || '').split('T')[0],
     }));
   },
 
