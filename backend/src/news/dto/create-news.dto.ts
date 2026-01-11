@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsDateString } from 'class-validator';
 import { NewsType } from '../../entities/news.entity';
 
 export class CreateNewsDto {
@@ -10,6 +10,10 @@ export class CreateNewsDto {
 
   @IsEnum(NewsType)
   type: NewsType;
+
+  @IsOptional()
+  @IsDateString()
+  publishDate?: string;
 
   @IsOptional()
   @IsBoolean()
@@ -26,6 +30,10 @@ export class UpdateNewsDto {
   @IsOptional()
   @IsEnum(NewsType)
   type?: NewsType;
+
+  @IsOptional()
+  @IsDateString()
+  publishDate?: string;
 
   @IsOptional()
   @IsBoolean()

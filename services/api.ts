@@ -460,15 +460,21 @@ export const api = {
     }),
 
     // News
-    createNews: (data: any) => fetchApi<any>('/news', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    createNews: (data: any) => {
+      const { date, ...rest } = data;
+      return fetchApi<any>('/news', {
+        method: 'POST',
+        body: JSON.stringify({ ...rest, publishDate: date }),
+      });
+    },
 
-    updateNews: (data: any) => fetchApi<any>(`/news/${data.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    updateNews: (data: any) => {
+      const { id, date, ...rest } = data;
+      return fetchApi<any>(`/news/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...rest, publishDate: date }),
+      });
+    },
 
     deleteNews: (id: string) => fetchApi<any>(`/news/${id}`, { method: 'DELETE' }),
 
